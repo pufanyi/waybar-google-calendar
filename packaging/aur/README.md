@@ -15,5 +15,4 @@ Before uploading to AUR:
 
 5. Copy `PKGBUILD` and `.SRCINFO` into the AUR git repository and push.
 
-The package depends on the official Arch package `googleworkspace-cli` for OAuth
-and Google Calendar API access.
+OAuth and Google Calendar API access are handled natively by the application.

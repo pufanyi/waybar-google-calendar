@@ -1,4 +1,4 @@
-use crate::model::Event;
+use crate::model::{DateRange, Event};
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime};
 use std::collections::BTreeSet;
 
@@ -60,6 +60,14 @@ pub fn month_dates(year: i32, month: u32) -> Vec<NaiveDate> {
         .collect()
 }
 
+pub fn visible_month_range(year: i32, month: u32) -> DateRange {
+    let dates = month_dates(year, month);
+    DateRange {
+        start: *dates.first().expect("month grid has a start date"),
+        end_exclusive: *dates.last().expect("month grid has an end date") + ChronoDuration::days(1),
+    }
+}
+
 pub fn month_name(month: u32) -> &'static str {
     match month {
         1 => "January",
@@ -103,6 +111,16 @@ mod tests {
             dates
                 .iter()
                 .any(|date| *date == NaiveDate::from_ymd_opt(2026, 5, 1).unwrap())
+        );
+    }
+
+    #[test]
+    fn visible_month_range_covers_rendered_grid() {
+        let range = visible_month_range(2026, 5);
+        assert_eq!(range.start, NaiveDate::from_ymd_opt(2026, 4, 27).unwrap());
+        assert_eq!(
+            range.end_exclusive,
+            NaiveDate::from_ymd_opt(2026, 6, 8).unwrap()
         );
     }
 }

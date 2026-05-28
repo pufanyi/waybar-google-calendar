@@ -40,7 +40,6 @@ pub fn run(config: Config) -> Result<(), String> {
             relm.allow_multiple_instances(true);
             relm.run::<agenda::AgendaApp>(agenda::AgendaInit {
                 query: crate::model::AgendaQuery {
-                    days: config.days,
                     calendar: config.calendar,
                     timezone: config.timezone,
                 },

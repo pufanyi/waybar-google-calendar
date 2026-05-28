@@ -1,4 +1,4 @@
-use crate::model::{Config, DEFAULT_DAYS, Mode};
+use crate::model::{Config, Mode};
 use std::env;
 use std::path::PathBuf;
 
@@ -16,10 +16,6 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
     }
 
     let mut mode = Mode::Agenda;
-    let mut days = env::var("GCAL_DAYS")
-        .ok()
-        .and_then(|value| value.parse::<u32>().ok())
-        .unwrap_or(DEFAULT_DAYS);
     let mut calendar = env_string("GCAL_CALENDAR");
     let mut timezone = env_string("GCAL_TIMEZONE");
     let mut theme_path = env_path("WAYBAR_GCAL_THEME");
@@ -41,7 +37,7 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
                 let raw = args
                     .get(index + 1)
                     .ok_or_else(|| "--days requires a positive integer".to_string())?;
-                days = raw
+                let days = raw
                     .parse::<u32>()
                     .map_err(|_| format!("Invalid --days value: {raw}"))?;
                 if days == 0 || days > 90 {
@@ -76,7 +72,6 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
 
     Ok(CliCommand::Run(Config {
         mode,
-        days,
         calendar,
         timezone,
         theme_path,
@@ -86,22 +81,28 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
 pub fn print_help() {
     println!(
         "Usage:
-  waybar-gcal agenda [--days N] [--theme PATH]
-  waybar-gcal agenda [--calendar NAME_OR_ID] [--timezone TZ]
+  waybar-gcal agenda [--calendar NAME_OR_ID] [--timezone TZ] [--theme PATH]
   waybar-gcal month [--theme PATH]
   waybar-gcal auth
   waybar-gcal print-theme
+
+Agenda:
+  Events are fetched for the visible calendar grid. Changing months refreshes
+  the Google Calendar range for the month currently on screen.
+  --days N is accepted for older Waybar configs but no longer controls fetching.
 
 Theme:
   Default user theme path: ~/.config/waybar-google-calendar/style.css
   --theme PATH overrides the default user theme path
 
 Environment:
-  GCAL_DAYS              Default agenda window, in days (default: 7)
+  GCAL_DAYS              Deprecated; accepted for older configs
   GCAL_CALENDAR          Calendar name or ID filter for agenda
   GCAL_TIMEZONE          IANA timezone override for agenda
   GCAL_CACHE_TTL         Cache freshness in seconds (default: 300)
-  GCAL_FETCH_TIMEOUT     gws fetch timeout in seconds (default: 25)
+  GCAL_FETCH_TIMEOUT     Google API request/auth timeout in seconds (default: 25)
+  WAYBAR_GCAL_CLIENT_SECRET
+                         OAuth client secret JSON path
   WAYBAR_GCAL_THEME      CSS file appended after the built-in theme"
     );
 }

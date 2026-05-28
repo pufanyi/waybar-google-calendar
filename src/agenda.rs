@@ -1,13 +1,13 @@
 use crate::cache::{cache_is_fresh, read_cache, write_cache};
 use crate::date::{
     event_date, event_days, format_day_label, format_time_label, month_dates, month_name,
-    parse_event_start,
+    parse_event_start, visible_month_range,
 };
-use crate::gws::fetch_events;
-use crate::model::{AgendaQuery, AgendaResult, AgendaState, Event};
+use crate::google::fetch_events;
+use crate::model::{AgendaQuery, AgendaResult, AgendaState, DateRange, Event};
 use crate::ui::{add_escape_to_close, classed_button, clear_box, label};
 use adw::prelude::*;
-use chrono::{DateTime, Datelike, Local, NaiveDate};
+use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local, NaiveDate};
 use relm4::{Component, ComponentParts, ComponentSender};
 use std::collections::BTreeSet;
 
@@ -28,11 +28,61 @@ pub struct AgendaApp {
 #[derive(Debug)]
 pub enum AgendaMsg {
     Refresh,
+    LoadVisibleRange,
     PreviousMonth,
     NextMonth,
     Today,
     ClearSelection,
     SelectDay(NaiveDate),
+}
+
+impl AgendaApp {
+    fn current_range(&self) -> DateRange {
+        visible_month_range(self.calendar_year, self.calendar_month)
+    }
+
+    fn load_visible_range(&mut self, sender: ComponentSender<Self>, force: bool) {
+        let range = self.current_range();
+        self.state.range = range;
+
+        if let Some(cache) = read_cache(&self.query, range) {
+            self.state.events = cache.events;
+            self.state.error = None;
+            self.state.fetched_at = Some(cache.fetched_at);
+            self.state.cached = true;
+            if !force && cache_is_fresh(cache.fetched_at) {
+                self.state.loading = false;
+                self.state.loading_range = None;
+                return;
+            }
+        } else {
+            self.state.events.clear();
+            self.state.fetched_at = None;
+            self.state.cached = false;
+        }
+
+        if self.state.loading_range == Some(range) {
+            return;
+        }
+
+        self.state.loading = true;
+        self.state.loading_range = Some(range);
+        self.state.error = None;
+
+        let query = self.query.clone();
+        sender.spawn_oneshot_command(move || match fetch_events(&query, range) {
+            Ok(events) => AgendaResult {
+                range,
+                events,
+                error: None,
+            },
+            Err(error) => AgendaResult {
+                range,
+                events: Vec::new(),
+                error: Some(error),
+            },
+        });
+    }
 }
 
 pub struct AgendaWidgets {
@@ -107,9 +157,12 @@ impl Component for AgendaApp {
         add_escape_to_close(&root);
 
         let today = Local::now().date_naive();
-        let initial_cache = read_cache(&init.query);
+        let initial_range = visible_month_range(today.year(), today.month());
+        let initial_cache = read_cache(&init.query, initial_range);
         let state = match &initial_cache {
             Some(cache) => AgendaState {
+                range: initial_range,
+                loading_range: None,
                 events: cache.events.clone(),
                 error: None,
                 fetched_at: Some(cache.fetched_at),
@@ -117,6 +170,8 @@ impl Component for AgendaApp {
                 cached: true,
             },
             None => AgendaState {
+                range: initial_range,
+                loading_range: None,
                 events: Vec::new(),
                 error: None,
                 fetched_at: None,
@@ -144,7 +199,7 @@ impl Component for AgendaApp {
             .map(|cache| !cache_is_fresh(cache.fetched_at))
             .unwrap_or(true);
         if should_fetch {
-            sender.input(AgendaMsg::Refresh);
+            sender.input(AgendaMsg::LoadVisibleRange);
         }
 
         ComponentParts { model, widgets }
@@ -153,23 +208,10 @@ impl Component for AgendaApp {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
         match message {
             AgendaMsg::Refresh => {
-                if self.state.loading {
-                    return;
-                }
-                self.state.loading = true;
-                self.state.error = None;
-
-                let query = self.query.clone();
-                sender.spawn_oneshot_command(move || match fetch_events(&query) {
-                    Ok(events) => AgendaResult {
-                        events,
-                        error: None,
-                    },
-                    Err(error) => AgendaResult {
-                        events: Vec::new(),
-                        error: Some(error),
-                    },
-                });
+                self.load_visible_range(sender, true);
+            }
+            AgendaMsg::LoadVisibleRange => {
+                self.load_visible_range(sender, false);
             }
             AgendaMsg::PreviousMonth => {
                 if self.calendar_month == 1 {
@@ -178,6 +220,8 @@ impl Component for AgendaApp {
                 } else {
                     self.calendar_month -= 1;
                 }
+                self.selected_day = None;
+                self.load_visible_range(sender, false);
             }
             AgendaMsg::NextMonth => {
                 if self.calendar_month == 12 {
@@ -186,20 +230,27 @@ impl Component for AgendaApp {
                 } else {
                     self.calendar_month += 1;
                 }
+                self.selected_day = None;
+                self.load_visible_range(sender, false);
             }
             AgendaMsg::Today => {
                 let today = Local::now().date_naive();
                 self.calendar_year = today.year();
                 self.calendar_month = today.month();
                 self.selected_day = Some(today);
+                self.load_visible_range(sender, false);
             }
             AgendaMsg::ClearSelection => {
                 self.selected_day = None;
             }
             AgendaMsg::SelectDay(day) => {
+                let previous_range = self.current_range();
                 self.calendar_year = day.year();
                 self.calendar_month = day.month();
                 self.selected_day = Some(day);
+                if self.current_range() != previous_range {
+                    self.load_visible_range(sender, false);
+                }
             }
         }
     }
@@ -210,13 +261,19 @@ impl Component for AgendaApp {
         _sender: ComponentSender<Self>,
         _root: &Self::Root,
     ) {
+        if result.range != self.current_range() {
+            return;
+        }
+
         self.state.loading = false;
+        self.state.loading_range = None;
+        self.state.range = result.range;
         if let Some(error) = result.error {
             self.state.error = Some(error);
             self.state.cached = !self.state.events.is_empty();
         } else {
             let fetched_at = Local::now();
-            write_cache(&self.query, &result.events, fetched_at);
+            write_cache(&self.query, result.range, &result.events, fetched_at);
             self.state.events = result.events;
             self.state.error = None;
             self.state.fetched_at = Some(fetched_at);
@@ -409,7 +466,7 @@ fn build_agenda_list(
     header.append(&label("Agenda", &["agenda-header"], 0.0, false));
     let range_text = selected_day
         .map(|day| day.format("%a %b %-d").to_string())
-        .unwrap_or_else(|| format!("Next {} days", query.days));
+        .unwrap_or_else(|| range_label(state.range));
     header.append(&label(&range_text, &["subtle"], 0.0, false));
     if let Some(calendar) = &query.calendar {
         header.append(&label(calendar, &["pill"], 0.0, false));
@@ -458,7 +515,7 @@ fn build_agenda_list(
     } else if visible_events.is_empty() {
         let detail = selected_day
             .map(|day| format!("No loaded events for {}.", day.format("%A, %B %-d")))
-            .unwrap_or_else(|| format!("You are clear for the next {} days.", query.days));
+            .unwrap_or_else(|| "No loaded events for this calendar view.".to_string());
         list.append(&message_card("No upcoming events", Some(&detail), false));
     } else {
         for event in visible_events {
@@ -469,6 +526,32 @@ fn build_agenda_list(
     scroll.set_child(Some(&list));
     right.append(&scroll);
     right
+}
+
+fn range_label(range: DateRange) -> String {
+    let end = range.end_exclusive - ChronoDuration::days(1);
+    if range.start.year() == end.year() {
+        if range.start.month() == end.month() {
+            return format!(
+                "{} {}-{}",
+                month_name(range.start.month()),
+                range.start.day(),
+                end.day()
+            );
+        }
+        return format!(
+            "{} {}-{} {}",
+            range.start.format("%b"),
+            range.start.day(),
+            end.format("%b"),
+            end.day()
+        );
+    }
+    format!(
+        "{}-{}",
+        range.start.format("%b %-d %Y"),
+        end.format("%b %-d %Y")
+    )
 }
 
 fn visible_events(events: &[Event], selected_day: Option<NaiveDate>) -> Vec<&Event> {

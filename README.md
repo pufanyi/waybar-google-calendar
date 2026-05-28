@@ -5,15 +5,15 @@ GTK4/Relm4 Google Calendar popup for Waybar.
 This project provides a small native Linux desktop popup intended for Waybar's
 clock module:
 
-- `waybar-gcal agenda --days 7` shows upcoming Google Calendar events.
+- `waybar-gcal agenda` shows Google Calendar events for the visible calendar grid.
 - `waybar-gcal agenda --calendar Work --timezone Asia/Singapore` filters the agenda.
 - `waybar-gcal month` shows a local month calendar.
-- `waybar-gcal auth` starts Google Workspace CLI calendar authentication.
+- `waybar-gcal auth` starts Google Calendar OAuth authentication.
 - `waybar-gcal print-theme` prints the built-in CSS theme.
 
-The UI is built with Relm4 on top of GTK4/libadwaita. The Google API integration
-is delegated to `googleworkspace-cli` (`gws`) so this project can focus on the
-Waybar popup UI, cache behavior, and desktop packaging.
+The UI is built with Relm4 on top of GTK4/libadwaita. Google Calendar access is
+implemented natively with `yup-oauth2` and `reqwest`; no external Google CLI is
+required at runtime.
 
 ## Dependencies
 
@@ -21,7 +21,6 @@ Runtime:
 
 - `gtk4`
 - `libadwaita`
-- `googleworkspace-cli`
 
 Build:
 
@@ -31,7 +30,7 @@ Build:
 On Arch Linux:
 
 ```bash
-sudo pacman -S gtk4 libadwaita googleworkspace-cli rust
+sudo pacman -S gtk4 libadwaita rust
 ```
 
 ## Build
@@ -42,15 +41,27 @@ cargo build --release
 
 ## Authentication
 
+Create an OAuth desktop client in Google Cloud with the Calendar API enabled,
+then place the downloaded client secret JSON at:
+
+```text
+~/.config/waybar-google-calendar/client_secret.json
+```
+
+Or point to it explicitly:
+
+```bash
+export WAYBAR_GCAL_CLIENT_SECRET=/path/to/client_secret.json
+```
+
+Then authenticate:
+
 ```bash
 waybar-gcal auth
 ```
 
-This runs:
-
-```bash
-gws auth login --services calendar --readonly
-```
+Tokens are stored at
+`~/.local/share/waybar-google-calendar/oauth-token.json` by default.
 
 ## Waybar
 
@@ -59,7 +70,7 @@ Use `examples/waybar-clock.json` as a starting point:
 ```json
 {
   "clock": {
-    "on-click": "waybar-gcal agenda --days 7",
+    "on-click": "waybar-gcal agenda",
     "on-click-right": "waybar-gcal month"
   }
 }
@@ -67,15 +78,17 @@ Use `examples/waybar-clock.json` as a starting point:
 
 The agenda popup includes an interactive month pane. Use the arrow buttons to
 move between months, click a day to filter the agenda list, or use `All` and
-`Today` for quick selection. The standalone month popup supports month and year
-navigation plus day selection.
+`Today` for quick selection. Events are fetched dynamically for the visible
+calendar grid, so changing months refreshes the Google Calendar range for that
+month. The standalone month popup supports month and year navigation plus day
+selection.
 
 Agenda can also filter to a calendar name or ID:
 
 ```json
 {
   "clock": {
-    "on-click": "waybar-gcal agenda --days 7 --calendar Work --timezone Asia/Singapore"
+    "on-click": "waybar-gcal agenda --calendar Work --timezone Asia/Singapore"
   }
 }
 ```
@@ -87,13 +100,13 @@ pieces are split by responsibility:
 
 - GTK/Relm4 owns the windowing and component lifecycle.
 - `chrono` owns local date arithmetic and formatting.
-- `googleworkspace-cli` owns Google OAuth, token storage, account timezone, and
-  Google Calendar API behavior.
+- `yup-oauth2` owns Google OAuth and token refresh.
+- `reqwest` owns Google Calendar HTTP requests.
 
-Google Calendar recurrence expansion is already handled by the backend because
-`gws calendar +agenda` queries events with `singleEvents=true`. If this project
-adds offline `.ics` support later, good candidate crates are `icalendar` for
-iCalendar parsing/building and `rrule` for RFC recurrence expansion.
+Google Calendar recurrence expansion is handled by querying `events.list` with
+`singleEvents=true`. If this project adds offline `.ics` support later, good
+candidate crates are `icalendar` for iCalendar parsing/building and `rrule` for
+RFC recurrence expansion.
 
 ## Themes
 
@@ -139,11 +152,12 @@ The packaged default theme is also installed at:
 
 ## Environment
 
-- `GCAL_DAYS`: default agenda range in days.
+- `GCAL_DAYS`: deprecated; accepted for older configs.
 - `GCAL_CALENDAR`: calendar name or ID filter for agenda.
 - `GCAL_TIMEZONE`: IANA timezone override for agenda.
 - `GCAL_CACHE_TTL`: cache freshness in seconds, default `300`.
-- `GCAL_FETCH_TIMEOUT`: `gws` fetch timeout in seconds, default `25`.
+- `GCAL_FETCH_TIMEOUT`: Google API request/auth timeout in seconds, default `25`.
+- `WAYBAR_GCAL_CLIENT_SECRET`: OAuth client secret JSON path.
 - `WAYBAR_GCAL_THEME`: CSS file appended after the built-in theme.
 
 ## Packaging

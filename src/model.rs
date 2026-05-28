@@ -1,8 +1,7 @@
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, NaiveDate};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-pub const DEFAULT_DAYS: u32 = 7;
 pub const CACHE_TTL_SECONDS: i64 = 300;
 pub const FETCH_TIMEOUT_SECONDS: u64 = 25;
 
@@ -15,7 +14,6 @@ pub enum Mode {
 #[derive(Debug, Clone)]
 pub struct Config {
     pub mode: Mode,
-    pub days: u32,
     pub calendar: Option<String>,
     pub timezone: Option<String>,
     pub theme_path: Option<PathBuf>,
@@ -35,18 +33,13 @@ pub struct Event {
     pub end: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct GwsAgenda {
-    #[serde(default)]
-    pub events: Vec<Event>,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CachePayload {
     pub version: u32,
-    pub days: u32,
     pub calendar: Option<String>,
     pub timezone: Option<String>,
+    pub start: String,
+    pub end_exclusive: String,
     pub fetched_at: String,
     pub events: Vec<Event>,
 }
@@ -59,19 +52,27 @@ pub struct CachedEvents {
 
 #[derive(Debug, Clone)]
 pub struct AgendaResult {
+    pub range: DateRange,
     pub events: Vec<Event>,
     pub error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct AgendaQuery {
-    pub days: u32,
     pub calendar: Option<String>,
     pub timezone: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DateRange {
+    pub start: NaiveDate,
+    pub end_exclusive: NaiveDate,
+}
+
 #[derive(Debug, Clone)]
 pub struct AgendaState {
+    pub range: DateRange,
+    pub loading_range: Option<DateRange>,
     pub events: Vec<Event>,
     pub error: Option<String>,
     pub fetched_at: Option<DateTime<Local>>,

@@ -3,7 +3,7 @@ mod app;
 mod cache;
 mod cli;
 mod date;
-mod gws;
+mod google;
 mod model;
 mod month;
 mod paths;
@@ -18,8 +18,8 @@ fn main() {
     match cli::parse_args(env::args().skip(1).collect()) {
         Ok(CliCommand::Help) => cli::print_help(),
         Ok(CliCommand::PrintTheme) => print!("{}", theme::builtin_css()),
-        Ok(CliCommand::Auth) => match gws::auth_calendar() {
-            Ok(code) => std::process::exit(code),
+        Ok(CliCommand::Auth) => match google::auth_calendar() {
+            Ok(()) => println!("Google Calendar authenticated."),
             Err(message) => {
                 eprintln!("{message}");
                 std::process::exit(1);

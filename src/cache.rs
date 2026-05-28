@@ -1,18 +1,19 @@
-use crate::model::{AgendaQuery, CACHE_TTL_SECONDS, CachePayload, CachedEvents, Event};
+use crate::model::{AgendaQuery, CACHE_TTL_SECONDS, CachePayload, CachedEvents, DateRange, Event};
 use crate::paths;
 use chrono::{DateTime, Local};
 use std::env;
 use std::fs;
 
-const CACHE_VERSION: u32 = 2;
+const CACHE_VERSION: u32 = 3;
 
-pub fn read_cache(query: &AgendaQuery) -> Option<CachedEvents> {
-    let file = paths::cache_file(&cache_key(query));
+pub fn read_cache(query: &AgendaQuery, range: DateRange) -> Option<CachedEvents> {
+    let file = paths::cache_file(&cache_key(query, range));
     let payload: CachePayload = serde_json::from_str(&fs::read_to_string(file).ok()?).ok()?;
     if payload.version != CACHE_VERSION
-        || payload.days != query.days
         || payload.calendar != query.calendar
         || payload.timezone != query.timezone
+        || payload.start != range.start.to_string()
+        || payload.end_exclusive != range.end_exclusive.to_string()
     {
         return None;
     }
@@ -25,16 +26,22 @@ pub fn read_cache(query: &AgendaQuery) -> Option<CachedEvents> {
     })
 }
 
-pub fn write_cache(query: &AgendaQuery, events: &[Event], fetched_at: DateTime<Local>) {
-    let file = paths::cache_file(&cache_key(query));
+pub fn write_cache(
+    query: &AgendaQuery,
+    range: DateRange,
+    events: &[Event],
+    fetched_at: DateTime<Local>,
+) {
+    let file = paths::cache_file(&cache_key(query, range));
     if let Some(parent) = file.parent() {
         let _ = fs::create_dir_all(parent);
     }
     let payload = CachePayload {
         version: CACHE_VERSION,
-        days: query.days,
         calendar: query.calendar.clone(),
         timezone: query.timezone.clone(),
+        start: range.start.to_string(),
+        end_exclusive: range.end_exclusive.to_string(),
         fetched_at: fetched_at.to_rfc3339(),
         events: events.to_vec(),
     };
@@ -51,8 +58,8 @@ pub fn cache_is_fresh(fetched_at: DateTime<Local>) -> bool {
     (Local::now() - fetched_at).num_seconds() <= ttl
 }
 
-fn cache_key(query: &AgendaQuery) -> String {
-    let mut key = format!("{}d", query.days);
+fn cache_key(query: &AgendaQuery, range: DateRange) -> String {
+    let mut key = format!("{}-{}", range.start, range.end_exclusive);
     if let Some(calendar) = &query.calendar {
         key.push_str("-cal-");
         key.push_str(&sanitize_key_part(calendar));
@@ -83,11 +90,17 @@ mod tests {
     #[test]
     fn cache_key_includes_query_filters() {
         let query = AgendaQuery {
-            days: 14,
             calendar: Some("Work Calendar".to_string()),
             timezone: Some("Asia/Singapore".to_string()),
         };
+        let range = DateRange {
+            start: chrono::NaiveDate::from_ymd_opt(2026, 5, 1).unwrap(),
+            end_exclusive: chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(),
+        };
 
-        assert_eq!(cache_key(&query), "14d-cal-Work-Calendar-tz-Asia-Singapore");
+        assert_eq!(
+            cache_key(&query, range),
+            "2026-05-01-2026-06-01-cal-Work-Calendar-tz-Asia-Singapore"
+        );
     }
 }
