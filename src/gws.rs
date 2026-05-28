@@ -1,5 +1,5 @@
 use crate::date::parse_event_start;
-use crate::model::{Event, FETCH_TIMEOUT_SECONDS, GwsAgenda};
+use crate::model::{AgendaQuery, Event, FETCH_TIMEOUT_SECONDS, GwsAgenda};
 use std::env;
 use std::process::{Command, Stdio};
 use std::time::Duration;
@@ -13,21 +13,34 @@ pub fn auth_calendar() -> Result<i32, String> {
     Ok(status.code().unwrap_or(1))
 }
 
-pub fn fetch_events(days: u32) -> Result<Vec<Event>, String> {
+pub fn fetch_events(query: &AgendaQuery) -> Result<Vec<Event>, String> {
     let timeout = env::var("GCAL_FETCH_TIMEOUT")
         .ok()
         .and_then(|value| value.parse::<u64>().ok())
         .unwrap_or(FETCH_TIMEOUT_SECONDS);
 
+    let days = query.days.to_string();
+    let mut args = vec![
+        "calendar".to_string(),
+        "+agenda".to_string(),
+        "--days".to_string(),
+        days,
+        "--format".to_string(),
+        "json".to_string(),
+    ];
+
+    if let Some(calendar) = &query.calendar {
+        args.push("--calendar".to_string());
+        args.push(calendar.clone());
+    }
+
+    if let Some(timezone) = &query.timezone {
+        args.push("--timezone".to_string());
+        args.push(timezone.clone());
+    }
+
     let mut child = Command::new("gws")
-        .args([
-            "calendar",
-            "+agenda",
-            "--days",
-            &days.to_string(),
-            "--format",
-            "json",
-        ])
+        .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()

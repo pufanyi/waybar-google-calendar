@@ -38,7 +38,13 @@ pub fn run(config: Config) -> Result<(), String> {
         Mode::Agenda => {
             let relm: RelmApp<agenda::AgendaMsg> = RelmApp::from_app(app).with_args(Vec::new());
             relm.allow_multiple_instances(true);
-            relm.run::<agenda::AgendaApp>(agenda::AgendaInit { days: config.days });
+            relm.run::<agenda::AgendaApp>(agenda::AgendaInit {
+                query: crate::model::AgendaQuery {
+                    days: config.days,
+                    calendar: config.calendar,
+                    timezone: config.timezone,
+                },
+            });
         }
         Mode::Month => {
             let relm: RelmApp<month::MonthMsg> = RelmApp::from_app(app).with_args(Vec::new());

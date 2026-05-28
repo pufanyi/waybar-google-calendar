@@ -20,6 +20,8 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
         .ok()
         .and_then(|value| value.parse::<u32>().ok())
         .unwrap_or(DEFAULT_DAYS);
+    let mut calendar = env_string("GCAL_CALENDAR");
+    let mut timezone = env_string("GCAL_TIMEZONE");
     let mut theme_path = env_path("WAYBAR_GCAL_THEME");
 
     let mut index = 0;
@@ -54,6 +56,20 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
                 theme_path = Some(PathBuf::from(raw));
                 index += 2;
             }
+            "--calendar" => {
+                let raw = args
+                    .get(index + 1)
+                    .ok_or_else(|| "--calendar requires a calendar name or ID".to_string())?;
+                calendar = Some(raw.clone());
+                index += 2;
+            }
+            "--timezone" | "--tz" => {
+                let raw = args
+                    .get(index + 1)
+                    .ok_or_else(|| "--timezone requires an IANA timezone".to_string())?;
+                timezone = Some(raw.clone());
+                index += 2;
+            }
             unknown => return Err(format!("Unknown argument: {unknown}")),
         }
     }
@@ -61,6 +77,8 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
     Ok(CliCommand::Run(Config {
         mode,
         days,
+        calendar,
+        timezone,
         theme_path,
     }))
 }
@@ -69,6 +87,7 @@ pub fn print_help() {
     println!(
         "Usage:
   waybar-gcal agenda [--days N] [--theme PATH]
+  waybar-gcal agenda [--calendar NAME_OR_ID] [--timezone TZ]
   waybar-gcal month [--theme PATH]
   waybar-gcal auth
   waybar-gcal print-theme
@@ -79,10 +98,16 @@ Theme:
 
 Environment:
   GCAL_DAYS              Default agenda window, in days (default: 7)
+  GCAL_CALENDAR          Calendar name or ID filter for agenda
+  GCAL_TIMEZONE          IANA timezone override for agenda
   GCAL_CACHE_TTL         Cache freshness in seconds (default: 300)
   GCAL_FETCH_TIMEOUT     gws fetch timeout in seconds (default: 25)
   WAYBAR_GCAL_THEME      CSS file appended after the built-in theme"
     );
+}
+
+fn env_string(name: &str) -> Option<String> {
+    env::var(name).ok().filter(|value| !value.is_empty())
 }
 
 fn env_path(name: &str) -> Option<PathBuf> {

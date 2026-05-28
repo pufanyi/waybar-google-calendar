@@ -6,6 +6,7 @@ This project provides a small native Linux desktop popup intended for Waybar's
 clock module:
 
 - `waybar-gcal agenda --days 7` shows upcoming Google Calendar events.
+- `waybar-gcal agenda --calendar Work --timezone Asia/Singapore` filters the agenda.
 - `waybar-gcal month` shows a local month calendar.
 - `waybar-gcal auth` starts Google Workspace CLI calendar authentication.
 - `waybar-gcal print-theme` prints the built-in CSS theme.
@@ -64,6 +65,31 @@ Use `examples/waybar-clock.json` as a starting point:
 }
 ```
 
+Agenda can also filter to a calendar name or ID:
+
+```json
+{
+  "clock": {
+    "on-click": "waybar-gcal agenda --days 7 --calendar Work --timezone Asia/Singapore"
+  }
+}
+```
+
+## Calendar Libraries
+
+The project currently avoids a dedicated calendar UI library. The maintained
+pieces are split by responsibility:
+
+- GTK/Relm4 owns the windowing and component lifecycle.
+- `chrono` owns local date arithmetic and formatting.
+- `googleworkspace-cli` owns Google OAuth, token storage, account timezone, and
+  Google Calendar API behavior.
+
+Google Calendar recurrence expansion is already handled by the backend because
+`gws calendar +agenda` queries events with `singleEvents=true`. If this project
+adds offline `.ics` support later, good candidate crates are `icalendar` for
+iCalendar parsing/building and `rrule` for RFC recurrence expansion.
+
 ## Themes
 
 The app ships with a built-in `apple-light` GTK CSS theme. User CSS is appended
@@ -109,6 +135,8 @@ The packaged default theme is also installed at:
 ## Environment
 
 - `GCAL_DAYS`: default agenda range in days.
+- `GCAL_CALENDAR`: calendar name or ID filter for agenda.
+- `GCAL_TIMEZONE`: IANA timezone override for agenda.
 - `GCAL_CACHE_TTL`: cache freshness in seconds, default `300`.
 - `GCAL_FETCH_TIMEOUT`: `gws` fetch timeout in seconds, default `25`.
 - `WAYBAR_GCAL_THEME`: CSS file appended after the built-in theme.

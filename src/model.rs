@@ -16,6 +16,8 @@ pub enum Mode {
 pub struct Config {
     pub mode: Mode,
     pub days: u32,
+    pub calendar: Option<String>,
+    pub timezone: Option<String>,
     pub theme_path: Option<PathBuf>,
 }
 
@@ -57,6 +59,13 @@ pub struct CachedEvents {
 pub struct AgendaResult {
     pub events: Vec<Event>,
     pub error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AgendaQuery {
+    pub days: u32,
+    pub calendar: Option<String>,
+    pub timezone: Option<String>,
 }
 
 #[derive(Debug, Clone)]

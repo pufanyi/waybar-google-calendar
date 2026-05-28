@@ -3,7 +3,7 @@ use crate::date::{
     event_days, format_day_label, format_time_label, month_dates, parse_event_start,
 };
 use crate::gws::fetch_events;
-use crate::model::{AgendaResult, AgendaState, Event};
+use crate::model::{AgendaQuery, AgendaResult, AgendaState, Event};
 use crate::ui::{add_escape_to_close, clear_box, label};
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Local, NaiveDate};
@@ -12,12 +12,12 @@ use std::collections::BTreeSet;
 
 #[derive(Debug)]
 pub struct AgendaInit {
-    pub days: u32,
+    pub query: AgendaQuery,
 }
 
 #[derive(Debug)]
 pub struct AgendaApp {
-    days: u32,
+    query: AgendaQuery,
     state: AgendaState,
 }
 
@@ -97,7 +97,7 @@ impl Component for AgendaApp {
         root.set_content(Some(&root_box));
         add_escape_to_close(&root);
 
-        let initial_cache = read_cache(init.days);
+        let initial_cache = read_cache(init.query.days);
         let state = match &initial_cache {
             Some(cache) => AgendaState {
                 events: cache.events.clone(),
@@ -115,7 +115,7 @@ impl Component for AgendaApp {
             },
         };
         let model = AgendaApp {
-            days: init.days,
+            query: init.query,
             state,
         };
 
@@ -146,8 +146,8 @@ impl Component for AgendaApp {
                 self.state.loading = true;
                 self.state.error = None;
 
-                let days = self.days;
-                sender.spawn_oneshot_command(move || match fetch_events(days) {
+                let query = self.query.clone();
+                sender.spawn_oneshot_command(move || match fetch_events(&query) {
                     Ok(events) => AgendaResult {
                         events,
                         error: None,
@@ -173,7 +173,7 @@ impl Component for AgendaApp {
             self.state.cached = !self.state.events.is_empty();
         } else {
             let fetched_at = Local::now();
-            write_cache(self.days, &result.events, fetched_at);
+            write_cache(self.query.days, &result.events, fetched_at);
             self.state.events = result.events;
             self.state.error = None;
             self.state.fetched_at = Some(fetched_at);
@@ -193,7 +193,7 @@ fn render_agenda(model: &AgendaApp, widgets: &mut AgendaWidgets) {
         .append(&build_event_calendar(&event_days(&model.state.events)));
     widgets
         .content
-        .append(&build_agenda_list(model.days, &model.state));
+        .append(&build_agenda_list(&model.query, &model.state));
 
     widgets.refresh.set_sensitive(!model.state.loading);
     widgets.refresh.set_label(if model.state.loading {
@@ -263,18 +263,21 @@ fn build_event_calendar(event_days: &BTreeSet<NaiveDate>) -> gtk::Box {
     pane
 }
 
-fn build_agenda_list(days: u32, state: &AgendaState) -> gtk::Box {
+fn build_agenda_list(query: &AgendaQuery, state: &AgendaState) -> gtk::Box {
     let right = gtk::Box::new(gtk::Orientation::Vertical, 10);
     right.set_hexpand(true);
 
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     header.append(&label("Agenda", &["agenda-header"], 0.0, false));
     header.append(&label(
-        &format!("Next {days} days"),
+        &format!("Next {} days", query.days),
         &["subtle"],
         0.0,
         false,
     ));
+    if let Some(calendar) = &query.calendar {
+        header.append(&label(calendar, &["pill"], 0.0, false));
+    }
     header.append(&label(
         &format!("{} events", state.events.len()),
         &["accent"],
@@ -324,7 +327,7 @@ fn build_agenda_list(days: u32, state: &AgendaState) -> gtk::Box {
     } else if state.events.is_empty() {
         list.append(&message_card(
             "No upcoming events",
-            Some(&format!("You are clear for the next {days} days.")),
+            Some(&format!("You are clear for the next {} days.", query.days)),
             false,
         ));
     } else {
