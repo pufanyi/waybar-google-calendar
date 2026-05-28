@@ -45,6 +45,8 @@ pub struct GwsAgenda {
 pub struct CachePayload {
     pub version: u32,
     pub days: u32,
+    pub calendar: Option<String>,
+    pub timezone: Option<String>,
     pub fetched_at: String,
     pub events: Vec<Event>,
 }

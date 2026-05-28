@@ -15,6 +15,8 @@ pub struct MonthApp {
 pub enum MonthMsg {
     Previous,
     Next,
+    PreviousYear,
+    NextYear,
     Today,
     Select(NaiveDate),
 }
@@ -35,7 +37,7 @@ impl SimpleComponent for MonthApp {
     fn init_root() -> Self::Root {
         let root = adw::ApplicationWindow::builder()
             .title("Calendar")
-            .default_width(360)
+            .default_width(400)
             .default_height(390)
             .resizable(false)
             .build();
@@ -61,15 +63,19 @@ impl SimpleComponent for MonthApp {
         let topbar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         topbar.add_css_class("topbar");
 
+        let previous_year = classed_button("<<", &["nav-button"]);
         let previous = classed_button("<", &["nav-button"]);
         let next = classed_button(">", &["nav-button"]);
+        let next_year = classed_button(">>", &["nav-button"]);
         let close = classed_button("x", &["close-button"]);
         let title = label("", &["title"], 0.5, false);
         title.set_hexpand(true);
 
+        topbar.append(&previous_year);
         topbar.append(&previous);
         topbar.append(&title);
         topbar.append(&next);
+        topbar.append(&next_year);
         topbar.append(&close);
         root_box.append(&topbar);
 
@@ -97,7 +103,15 @@ impl SimpleComponent for MonthApp {
         }
         {
             let sender = sender.clone();
+            previous_year.connect_clicked(move |_| sender.input(MonthMsg::PreviousYear));
+        }
+        {
+            let sender = sender.clone();
             next.connect_clicked(move |_| sender.input(MonthMsg::Next));
+        }
+        {
+            let sender = sender.clone();
+            next_year.connect_clicked(move |_| sender.input(MonthMsg::NextYear));
         }
         {
             let sender = sender.clone();
@@ -134,6 +148,12 @@ impl SimpleComponent for MonthApp {
                 } else {
                     self.month += 1;
                 }
+            }
+            MonthMsg::PreviousYear => {
+                self.year -= 1;
+            }
+            MonthMsg::NextYear => {
+                self.year += 1;
             }
             MonthMsg::Today => {
                 let today = Local::now().date_naive();

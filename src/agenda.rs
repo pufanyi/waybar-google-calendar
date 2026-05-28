@@ -1,10 +1,11 @@
 use crate::cache::{cache_is_fresh, read_cache, write_cache};
 use crate::date::{
-    event_days, format_day_label, format_time_label, month_dates, parse_event_start,
+    event_date, event_days, format_day_label, format_time_label, month_dates, month_name,
+    parse_event_start,
 };
 use crate::gws::fetch_events;
 use crate::model::{AgendaQuery, AgendaResult, AgendaState, Event};
-use crate::ui::{add_escape_to_close, clear_box, label};
+use crate::ui::{add_escape_to_close, classed_button, clear_box, label};
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Local, NaiveDate};
 use relm4::{Component, ComponentParts, ComponentSender};
@@ -19,11 +20,19 @@ pub struct AgendaInit {
 pub struct AgendaApp {
     query: AgendaQuery,
     state: AgendaState,
+    calendar_year: i32,
+    calendar_month: u32,
+    selected_day: Option<NaiveDate>,
 }
 
 #[derive(Debug)]
 pub enum AgendaMsg {
     Refresh,
+    PreviousMonth,
+    NextMonth,
+    Today,
+    ClearSelection,
+    SelectDay(NaiveDate),
 }
 
 pub struct AgendaWidgets {
@@ -97,7 +106,8 @@ impl Component for AgendaApp {
         root.set_content(Some(&root_box));
         add_escape_to_close(&root);
 
-        let initial_cache = read_cache(init.query.days);
+        let today = Local::now().date_naive();
+        let initial_cache = read_cache(&init.query);
         let state = match &initial_cache {
             Some(cache) => AgendaState {
                 events: cache.events.clone(),
@@ -117,6 +127,9 @@ impl Component for AgendaApp {
         let model = AgendaApp {
             query: init.query,
             state,
+            calendar_year: today.year(),
+            calendar_month: today.month(),
+            selected_day: None,
         };
 
         let mut widgets = AgendaWidgets {
@@ -124,7 +137,7 @@ impl Component for AgendaApp {
             status_label,
             refresh,
         };
-        render_agenda(&model, &mut widgets);
+        render_agenda(&model, &mut widgets, sender.clone());
 
         let should_fetch = initial_cache
             .as_ref()
@@ -158,6 +171,36 @@ impl Component for AgendaApp {
                     },
                 });
             }
+            AgendaMsg::PreviousMonth => {
+                if self.calendar_month == 1 {
+                    self.calendar_month = 12;
+                    self.calendar_year -= 1;
+                } else {
+                    self.calendar_month -= 1;
+                }
+            }
+            AgendaMsg::NextMonth => {
+                if self.calendar_month == 12 {
+                    self.calendar_month = 1;
+                    self.calendar_year += 1;
+                } else {
+                    self.calendar_month += 1;
+                }
+            }
+            AgendaMsg::Today => {
+                let today = Local::now().date_naive();
+                self.calendar_year = today.year();
+                self.calendar_month = today.month();
+                self.selected_day = Some(today);
+            }
+            AgendaMsg::ClearSelection => {
+                self.selected_day = None;
+            }
+            AgendaMsg::SelectDay(day) => {
+                self.calendar_year = day.year();
+                self.calendar_month = day.month();
+                self.selected_day = Some(day);
+            }
         }
     }
 
@@ -173,7 +216,7 @@ impl Component for AgendaApp {
             self.state.cached = !self.state.events.is_empty();
         } else {
             let fetched_at = Local::now();
-            write_cache(self.query.days, &result.events, fetched_at);
+            write_cache(&self.query, &result.events, fetched_at);
             self.state.events = result.events;
             self.state.error = None;
             self.state.fetched_at = Some(fetched_at);
@@ -181,19 +224,27 @@ impl Component for AgendaApp {
         }
     }
 
-    fn update_view(&self, widgets: &mut Self::Widgets, _sender: ComponentSender<Self>) {
-        render_agenda(self, widgets);
+    fn update_view(&self, widgets: &mut Self::Widgets, sender: ComponentSender<Self>) {
+        render_agenda(self, widgets, sender);
     }
 }
 
-fn render_agenda(model: &AgendaApp, widgets: &mut AgendaWidgets) {
+fn render_agenda(
+    model: &AgendaApp,
+    widgets: &mut AgendaWidgets,
+    sender: ComponentSender<AgendaApp>,
+) {
     clear_box(&widgets.content);
-    widgets
-        .content
-        .append(&build_event_calendar(&event_days(&model.state.events)));
-    widgets
-        .content
-        .append(&build_agenda_list(&model.query, &model.state));
+    widgets.content.append(&build_event_calendar(
+        model,
+        &event_days(&model.state.events),
+        sender,
+    ));
+    widgets.content.append(&build_agenda_list(
+        &model.query,
+        &model.state,
+        model.selected_day,
+    ));
 
     widgets.refresh.set_sensitive(!model.state.loading);
     widgets.refresh.set_label(if model.state.loading {
@@ -204,23 +255,52 @@ fn render_agenda(model: &AgendaApp, widgets: &mut AgendaWidgets) {
     widgets.status_label.set_text(&agenda_status(&model.state));
 }
 
-fn build_event_calendar(event_days: &BTreeSet<NaiveDate>) -> gtk::Box {
+fn build_event_calendar(
+    model: &AgendaApp,
+    event_days: &BTreeSet<NaiveDate>,
+    sender: ComponentSender<AgendaApp>,
+) -> gtk::Box {
     let today = Local::now().date_naive();
     let pane = gtk::Box::new(gtk::Orientation::Vertical, 12);
     pane.add_css_class("left-pane");
-    pane.set_size_request(285, -1);
+    pane.set_size_request(292, -1);
+    pane.set_halign(gtk::Align::Start);
+    pane.set_hexpand(false);
 
-    pane.append(&label(
-        &today.format("%B %Y").to_string(),
+    let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let previous = classed_button("<", &["nav-button", "icon-button"]);
+    let next = classed_button(">", &["nav-button", "icon-button"]);
+    let title = label(
+        &format!(
+            "{} {}",
+            month_name(model.calendar_month),
+            model.calendar_year
+        ),
         &["month-title"],
-        0.0,
+        0.5,
         false,
-    ));
+    );
+    title.set_hexpand(true);
+
+    {
+        let sender = sender.clone();
+        previous.connect_clicked(move |_| sender.input(AgendaMsg::PreviousMonth));
+    }
+    {
+        let sender = sender.clone();
+        next.connect_clicked(move |_| sender.input(AgendaMsg::NextMonth));
+    }
+
+    header.append(&previous);
+    header.append(&title);
+    header.append(&next);
+    pane.append(&header);
 
     let grid = gtk::Grid::builder()
-        .column_spacing(6)
-        .row_spacing(7)
+        .column_spacing(5)
+        .row_spacing(5)
         .build();
+    grid.set_halign(gtk::Align::Center);
 
     for (col, weekday) in ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
         .iter()
@@ -231,64 +311,115 @@ fn build_event_calendar(event_days: &BTreeSet<NaiveDate>) -> gtk::Box {
         grid.attach(&item, col as i32, 0, 1, 1);
     }
 
-    for (index, day) in month_dates(today.year(), today.month()).iter().enumerate() {
+    for (index, day) in month_dates(model.calendar_year, model.calendar_month)
+        .iter()
+        .enumerate()
+    {
         let row = index / 7 + 1;
         let col = index % 7;
-        let text = if day.month() == today.month() {
-            day.day().to_string()
-        } else {
-            String::new()
-        };
-        let item = label(&text, &["date-cell"], 0.5, false);
-        item.set_size_request(30, 30);
+        let has_event = event_days.contains(day);
+        let item = calendar_day_button(day.day(), has_event);
+        item.set_size_request(34, 34);
+        if day.month() != model.calendar_month {
+            item.add_css_class("outside");
+        }
         if day.weekday().number_from_monday() >= 6 {
             item.add_css_class("weekend");
         }
-        if event_days.contains(day) {
+        if has_event {
             item.add_css_class("event-day");
         }
         if *day == today {
             item.add_css_class("today");
         }
+        if Some(*day) == model.selected_day {
+            item.add_css_class("selected");
+        }
+
+        let selected_day = *day;
+        let sender = sender.clone();
+        item.connect_clicked(move |_| sender.input(AgendaMsg::SelectDay(selected_day)));
+
         grid.attach(&item, col as i32, row as i32, 1, 1);
     }
 
     pane.append(&grid);
-    pane.append(&label(
-        "Highlighted days have agenda items.",
-        &["muted"],
-        0.0,
-        true,
-    ));
+
+    let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    actions.add_css_class("calendar-actions");
+    let all = classed_button("All", &["action-button"]);
+    if model.selected_day.is_none() {
+        all.add_css_class("selected");
+    }
+    let today_button = classed_button("Today", &["action-button"]);
+    if model.selected_day == Some(today) {
+        today_button.add_css_class("selected");
+    }
+
+    {
+        let sender = sender.clone();
+        all.connect_clicked(move |_| sender.input(AgendaMsg::ClearSelection));
+    }
+    {
+        let sender = sender.clone();
+        today_button.connect_clicked(move |_| sender.input(AgendaMsg::Today));
+    }
+
+    actions.append(&all);
+    actions.append(&today_button);
+    pane.append(&actions);
     pane
 }
 
-fn build_agenda_list(query: &AgendaQuery, state: &AgendaState) -> gtk::Box {
+fn calendar_day_button(day: u32, has_event: bool) -> gtk::Button {
+    let button = gtk::Button::new();
+    button.add_css_class("date-cell");
+
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 0);
+    content.add_css_class("date-cell-content");
+    content.set_halign(gtk::Align::Center);
+    content.set_valign(gtk::Align::Center);
+
+    let number = label(&day.to_string(), &["date-number"], 0.5, false);
+    number.set_halign(gtk::Align::Center);
+    content.append(&number);
+
+    let dot = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    dot.add_css_class("event-dot");
+    if !has_event {
+        dot.add_css_class("empty");
+    }
+    dot.set_halign(gtk::Align::Center);
+    content.append(&dot);
+
+    button.set_child(Some(&content));
+    button
+}
+
+fn build_agenda_list(
+    query: &AgendaQuery,
+    state: &AgendaState,
+    selected_day: Option<NaiveDate>,
+) -> gtk::Box {
     let right = gtk::Box::new(gtk::Orientation::Vertical, 10);
     right.set_hexpand(true);
+    let visible_events = visible_events(&state.events, selected_day);
 
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     header.append(&label("Agenda", &["agenda-header"], 0.0, false));
-    header.append(&label(
-        &format!("Next {} days", query.days),
-        &["subtle"],
-        0.0,
-        false,
-    ));
+    let range_text = selected_day
+        .map(|day| day.format("%a %b %-d").to_string())
+        .unwrap_or_else(|| format!("Next {} days", query.days));
+    header.append(&label(&range_text, &["subtle"], 0.0, false));
     if let Some(calendar) = &query.calendar {
         header.append(&label(calendar, &["pill"], 0.0, false));
     }
     header.append(&label(
-        &format!("{} events", state.events.len()),
+        &format!("{} events", visible_events.len()),
         &["accent"],
         0.0,
         false,
     ));
-    if state.loading {
-        header.append(&label("Loading", &["subtle"], 0.0, false));
-    } else if state.cached {
-        header.append(&label("Cached", &["subtle"], 0.0, false));
-    }
     right.append(&header);
 
     let scroll = gtk::ScrolledWindow::new();
@@ -311,7 +442,7 @@ fn build_agenda_list(query: &AgendaQuery, state: &AgendaState) -> gtk::Box {
             ));
         } else {
             list.append(&message_card("Refresh failed", Some(error), false));
-            for event in &state.events {
+            for event in visible_events {
                 list.append(&event_card(event));
             }
         }
@@ -321,17 +452,16 @@ fn build_agenda_list(query: &AgendaQuery, state: &AgendaState) -> gtk::Box {
             Some("Showing cached events while Google Calendar updates."),
             true,
         ));
-        for event in &state.events {
+        for event in visible_events {
             list.append(&event_card(event));
         }
-    } else if state.events.is_empty() {
-        list.append(&message_card(
-            "No upcoming events",
-            Some(&format!("You are clear for the next {} days.", query.days)),
-            false,
-        ));
+    } else if visible_events.is_empty() {
+        let detail = selected_day
+            .map(|day| format!("No loaded events for {}.", day.format("%A, %B %-d")))
+            .unwrap_or_else(|| format!("You are clear for the next {} days.", query.days));
+        list.append(&message_card("No upcoming events", Some(&detail), false));
     } else {
-        for event in &state.events {
+        for event in visible_events {
             list.append(&event_card(event));
         }
     }
@@ -339,6 +469,17 @@ fn build_agenda_list(query: &AgendaQuery, state: &AgendaState) -> gtk::Box {
     scroll.set_child(Some(&list));
     right.append(&scroll);
     right
+}
+
+fn visible_events(events: &[Event], selected_day: Option<NaiveDate>) -> Vec<&Event> {
+    events
+        .iter()
+        .filter(|event| {
+            selected_day
+                .map(|day| event_date(event) == Some(day))
+                .unwrap_or(true)
+        })
+        .collect()
 }
 
 fn event_card(event: &Event) -> gtk::Box {

@@ -65,6 +65,11 @@ Use `examples/waybar-clock.json` as a starting point:
 }
 ```
 
+The agenda popup includes an interactive month pane. Use the arrow buttons to
+move between months, click a day to filter the agenda list, or use `All` and
+`Today` for quick selection. The standalone month popup supports month and year
+navigation plus day selection.
+
 Agenda can also filter to a calendar name or ID:
 
 ```json

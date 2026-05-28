@@ -9,18 +9,18 @@ window {
 }
 
 .panel {
-  background: rgba(248, 248, 250, 0.88);
+  background: rgba(248, 248, 250, 0.92);
   border: 1px solid rgba(60, 60, 67, 0.18);
-  border-radius: 22px;
+  border-radius: 20px;
   padding: 16px;
   color: #1d1d1f;
-  box-shadow: 0 24px 58px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
 }
 
 .topbar {
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.68);
   border: 1px solid rgba(60, 60, 67, 0.12);
-  border-radius: 16px;
+  border-radius: 15px;
   padding: 8px 10px;
 }
 
@@ -51,10 +51,10 @@ window {
 }
 
 .left-pane {
-  background: rgba(255, 255, 255, 0.64);
+  background: rgba(255, 255, 255, 0.56);
   border: 1px solid rgba(60, 60, 67, 0.12);
-  border-radius: 18px;
-  padding: 14px;
+  border-radius: 16px;
+  padding: 13px;
 }
 
 .weekday {
@@ -65,33 +65,90 @@ window {
 
 .date-cell {
   color: #1d1d1f;
-  border-radius: 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  box-shadow: none;
   font-weight: 600;
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0;
+}
+
+.date-cell-content {
+  min-height: 26px;
+  min-width: 26px;
+}
+
+.date-number {
+  color: inherit;
+  font-weight: inherit;
+  min-height: 18px;
+}
+
+.event-dot {
+  background: #007aff;
+  border-radius: 999px;
+  min-height: 4px;
+  min-width: 4px;
+  margin-top: 1px;
+}
+
+.event-dot.empty {
+  background: transparent;
+}
+
+.date-cell:hover {
+  background: rgba(0, 122, 255, 0.10);
+  border-color: rgba(0, 122, 255, 0.16);
 }
 
 .date-cell.weekend {
   color: #6e6e73;
 }
 
-.date-cell.event-day {
-  color: #1d1d1f;
-  background: rgba(255, 204, 0, 0.24);
+.date-cell.outside {
+  color: rgba(142, 142, 147, 0.58);
 }
 
-.date-cell.today,
-.day.today {
-  color: #ffffff;
-  background: #007aff;
+.date-cell.event-day {
+  color: #1d1d1f;
+}
+
+.date-cell.today {
+  color: #007aff;
+  background: transparent;
+  border-color: rgba(0, 122, 255, 0.35);
   font-weight: 700;
+}
+
+.date-cell.selected {
+  background: #007aff;
+  border-color: #007aff;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.date-cell.today.selected {
+  background: #007aff;
+  color: #ffffff;
+}
+
+.date-cell.selected .event-dot {
+  background: #ffffff;
+}
+
+.date-cell.outside .event-dot {
+  opacity: 0.42;
 }
 
 .agenda-card,
 .empty-card {
-  background: rgba(255, 255, 255, 0.74);
+  background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(60, 60, 67, 0.12);
-  border-radius: 16px;
+  border-radius: 14px;
   padding: 11px 12px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
 .agenda-card:hover {
@@ -129,9 +186,34 @@ window {
   padding: 3px 10px;
 }
 
+.icon-button {
+  min-height: 30px;
+  min-width: 30px;
+  padding: 0;
+}
+
+.calendar-actions {
+  margin-top: 2px;
+}
+
+.nav-button:focus,
+.action-button:focus,
+.close-button:focus,
+.date-cell:focus,
+.day:focus {
+  box-shadow: none;
+  outline: none;
+}
+
 .nav-button:hover,
 .action-button:hover {
   background: rgba(0, 122, 255, 0.12);
+  color: #007aff;
+}
+
+.action-button.selected {
+  background: rgba(0, 122, 255, 0.14);
+  border-color: rgba(0, 122, 255, 0.30);
   color: #007aff;
 }
 
@@ -148,6 +230,7 @@ window {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 12px;
+  box-shadow: none;
   color: #1d1d1f;
   font-weight: 600;
   padding: 0;
@@ -163,7 +246,14 @@ window {
 }
 
 .day.outside {
-  color: rgba(142, 142, 147, 0.42);
+  color: rgba(142, 142, 147, 0.58);
+}
+
+.day.today {
+  color: #007aff;
+  background: transparent;
+  border-color: rgba(0, 122, 255, 0.35);
+  font-weight: 700;
 }
 
 .day.selected {

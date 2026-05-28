@@ -24,5 +24,22 @@
 
 .date-cell.today,
 .day.today {
+  color: #0a84ff;
+  background: transparent;
+  border-color: rgba(10, 132, 255, 0.35);
+}
+
+.date-cell.selected {
+  color: #ffffff;
   background: #0a84ff;
+  border-color: #0a84ff;
+}
+
+.date-cell.selected .event-dot {
+  background: #ffffff;
+}
+
+.action-button.selected {
+  color: #0a84ff;
+  border-color: rgba(10, 132, 255, 0.24);
 }

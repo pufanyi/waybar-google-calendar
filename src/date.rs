@@ -44,10 +44,11 @@ pub fn format_time_label(start: &str, end: &str) -> String {
 }
 
 pub fn event_days(events: &[Event]) -> BTreeSet<NaiveDate> {
-    events
-        .iter()
-        .filter_map(|event| parse_event_start(&event.start).map(|(date, _)| date))
-        .collect()
+    events.iter().filter_map(event_date).collect()
+}
+
+pub fn event_date(event: &Event) -> Option<NaiveDate> {
+    parse_event_start(&event.start).map(|(date, _)| date)
 }
 
 pub fn month_dates(year: i32, month: u32) -> Vec<NaiveDate> {

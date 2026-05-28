@@ -2,8 +2,8 @@ use crate::model::Mode;
 use std::env;
 use std::path::PathBuf;
 
-pub fn cache_file(days: u32) -> PathBuf {
-    cache_dir().join(format!("agenda-{days}d.json"))
+pub fn cache_file(name: &str) -> PathBuf {
+    cache_dir().join(format!("agenda-{name}.json"))
 }
 
 pub fn cache_dir() -> PathBuf {
