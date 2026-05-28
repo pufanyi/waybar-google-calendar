@@ -1,5 +1,6 @@
 mod agenda;
 mod app;
+mod auth_ui;
 mod cache;
 mod cli;
 mod date;

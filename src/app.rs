@@ -1,5 +1,5 @@
 use crate::model::{Config, Mode};
-use crate::{agenda, month, paths, single_instance, theme};
+use crate::{agenda, auth_ui, month, paths, single_instance, theme};
 use adw::prelude::*;
 use gtk::gio;
 use relm4::RelmApp;
@@ -18,6 +18,7 @@ pub fn run(config: Config) -> Result<(), String> {
     let app_id = match config.mode {
         Mode::Agenda => format!("{APP_ID}.agenda"),
         Mode::Month => format!("{APP_ID}.month"),
+        Mode::Auth => format!("{APP_ID}.auth"),
     };
 
     let app = adw::Application::builder()
@@ -49,6 +50,11 @@ pub fn run(config: Config) -> Result<(), String> {
             let relm: RelmApp<month::MonthMsg> = RelmApp::from_app(app).with_args(Vec::new());
             relm.allow_multiple_instances(true);
             relm.run::<month::MonthApp>(());
+        }
+        Mode::Auth => {
+            let relm: RelmApp<auth_ui::AuthMsg> = RelmApp::from_app(app).with_args(Vec::new());
+            relm.allow_multiple_instances(true);
+            relm.run::<auth_ui::AuthApp>(());
         }
     }
 

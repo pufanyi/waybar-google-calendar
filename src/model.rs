@@ -9,6 +9,7 @@ pub const FETCH_TIMEOUT_SECONDS: u64 = 25;
 pub enum Mode {
     Agenda,
     Month,
+    Auth,
 }
 
 #[derive(Debug, Clone)]

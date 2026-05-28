@@ -48,6 +48,7 @@ pub fn pid_file(mode: Mode) -> PathBuf {
     let suffix = match mode {
         Mode::Agenda => "agenda",
         Mode::Month => "month",
+        Mode::Auth => "auth",
     };
     env::var_os("XDG_RUNTIME_DIR")
         .map(PathBuf::from)

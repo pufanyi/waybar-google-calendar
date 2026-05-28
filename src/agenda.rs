@@ -3,13 +3,19 @@ use crate::date::{
     event_date, event_days, format_day_label, format_time_label, month_dates, month_name,
     parse_event_start, visible_month_range,
 };
-use crate::google::fetch_events;
+use crate::google::{self, fetch_events};
 use crate::model::{AgendaQuery, AgendaResult, AgendaState, DateRange, Event};
+use crate::paths;
 use crate::ui::{add_escape_to_close, classed_button, clear_box, label};
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local, NaiveDate};
+use gtk::gio;
 use relm4::{Component, ComponentParts, ComponentSender};
 use std::collections::BTreeSet;
+use std::fs;
+use std::path::Path;
+
+const GOOGLE_CLOUD_CREDENTIALS_URL: &str = "https://console.cloud.google.com/apis/credentials";
 
 #[derive(Debug)]
 pub struct AgendaInit {
@@ -23,6 +29,7 @@ pub struct AgendaApp {
     calendar_year: i32,
     calendar_month: u32,
     selected_day: Option<NaiveDate>,
+    authenticating: bool,
 }
 
 #[derive(Debug)]
@@ -34,6 +41,20 @@ pub enum AgendaMsg {
     Today,
     ClearSelection,
     SelectDay(NaiveDate),
+    StartAuth,
+    SaveAndStartAuth {
+        client_id: String,
+        client_secret: String,
+    },
+    OpenConfigDir,
+    OpenTokenDir,
+    OpenGoogleCloud,
+}
+
+#[derive(Debug)]
+pub enum AgendaCommandOutput {
+    Events(AgendaResult),
+    Auth(Result<(), String>),
 }
 
 impl AgendaApp {
@@ -70,17 +91,19 @@ impl AgendaApp {
         self.state.error = None;
 
         let query = self.query.clone();
-        sender.spawn_oneshot_command(move || match fetch_events(&query, range) {
-            Ok(events) => AgendaResult {
-                range,
-                events,
-                error: None,
-            },
-            Err(error) => AgendaResult {
-                range,
-                events: Vec::new(),
-                error: Some(error),
-            },
+        sender.spawn_oneshot_command(move || {
+            AgendaCommandOutput::Events(match fetch_events(&query, range) {
+                Ok(events) => AgendaResult {
+                    range,
+                    events,
+                    error: None,
+                },
+                Err(error) => AgendaResult {
+                    range,
+                    events: Vec::new(),
+                    error: Some(error),
+                },
+            })
         });
     }
 }
@@ -95,7 +118,7 @@ impl Component for AgendaApp {
     type Init = AgendaInit;
     type Input = AgendaMsg;
     type Output = ();
-    type CommandOutput = AgendaResult;
+    type CommandOutput = AgendaCommandOutput;
     type Root = adw::ApplicationWindow;
     type Widgets = AgendaWidgets;
 
@@ -185,6 +208,7 @@ impl Component for AgendaApp {
             calendar_year: today.year(),
             calendar_month: today.month(),
             selected_day: None,
+            authenticating: false,
         };
 
         let mut widgets = AgendaWidgets {
@@ -252,32 +276,95 @@ impl Component for AgendaApp {
                     self.load_visible_range(sender, false);
                 }
             }
+            AgendaMsg::StartAuth => {
+                if self.authenticating {
+                    return;
+                }
+                self.authenticating = true;
+                self.state.error = Some("Opening browser for Google OAuth...".to_string());
+                sender.spawn_oneshot_command(|| AgendaCommandOutput::Auth(google::auth_calendar()));
+            }
+            AgendaMsg::SaveAndStartAuth {
+                client_id,
+                client_secret,
+            } => {
+                if self.authenticating {
+                    return;
+                }
+                match google::save_client_secret(&client_id, &client_secret) {
+                    Ok(path) => {
+                        self.state.error = Some(format!(
+                            "OAuth client saved to {}. Opening browser for Google OAuth...",
+                            path.display()
+                        ));
+                        sender.input(AgendaMsg::StartAuth);
+                    }
+                    Err(error) => {
+                        self.state.error = Some(error);
+                    }
+                }
+            }
+            AgendaMsg::OpenConfigDir => {
+                self.state.error = Some(
+                    open_dir(&paths::config_dir())
+                        .map(|_| "Config folder opened.".to_string())
+                        .unwrap_or_else(|error| error),
+                );
+            }
+            AgendaMsg::OpenTokenDir => {
+                self.state.error = Some(
+                    open_dir(&paths::data_dir())
+                        .map(|_| "Token folder opened.".to_string())
+                        .unwrap_or_else(|error| error),
+                );
+            }
+            AgendaMsg::OpenGoogleCloud => {
+                self.state.error = Some(
+                    google::open_external_uri(GOOGLE_CLOUD_CREDENTIALS_URL)
+                        .map(|_| "Google Cloud opened in your browser.".to_string())
+                        .unwrap_or_else(|error| error),
+                );
+            }
         }
     }
 
     fn update_cmd(
         &mut self,
-        result: Self::CommandOutput,
-        _sender: ComponentSender<Self>,
+        output: Self::CommandOutput,
+        sender: ComponentSender<Self>,
         _root: &Self::Root,
     ) {
-        if result.range != self.current_range() {
-            return;
-        }
+        match output {
+            AgendaCommandOutput::Auth(Ok(())) => {
+                self.authenticating = false;
+                self.state.error =
+                    Some("Google Calendar authenticated. Loading events...".to_string());
+                self.load_visible_range(sender, true);
+            }
+            AgendaCommandOutput::Auth(Err(error)) => {
+                self.authenticating = false;
+                self.state.error = Some(error);
+            }
+            AgendaCommandOutput::Events(result) => {
+                if result.range != self.current_range() {
+                    return;
+                }
 
-        self.state.loading = false;
-        self.state.loading_range = None;
-        self.state.range = result.range;
-        if let Some(error) = result.error {
-            self.state.error = Some(error);
-            self.state.cached = !self.state.events.is_empty();
-        } else {
-            let fetched_at = Local::now();
-            write_cache(&self.query, result.range, &result.events, fetched_at);
-            self.state.events = result.events;
-            self.state.error = None;
-            self.state.fetched_at = Some(fetched_at);
-            self.state.cached = false;
+                self.state.loading = false;
+                self.state.loading_range = None;
+                self.state.range = result.range;
+                if let Some(error) = result.error {
+                    self.state.error = Some(error);
+                    self.state.cached = !self.state.events.is_empty();
+                } else {
+                    let fetched_at = Local::now();
+                    write_cache(&self.query, result.range, &result.events, fetched_at);
+                    self.state.events = result.events;
+                    self.state.error = None;
+                    self.state.fetched_at = Some(fetched_at);
+                    self.state.cached = false;
+                }
+            }
         }
     }
 
@@ -295,21 +382,32 @@ fn render_agenda(
     widgets.content.append(&build_event_calendar(
         model,
         &event_days(&model.state.events),
-        sender,
+        sender.clone(),
     ));
     widgets.content.append(&build_agenda_list(
         &model.query,
         &model.state,
         model.selected_day,
+        model.authenticating,
+        sender,
     ));
 
-    widgets.refresh.set_sensitive(!model.state.loading);
-    widgets.refresh.set_label(if model.state.loading {
+    widgets
+        .refresh
+        .set_sensitive(!model.state.loading && !model.authenticating);
+    widgets.refresh.set_label(if model.authenticating {
+        "Authenticating"
+    } else if model.state.loading {
         "Refreshing"
     } else {
         "Refresh"
     });
-    widgets.status_label.set_text(&agenda_status(&model.state));
+    let status = if model.authenticating {
+        "Authenticating".to_string()
+    } else {
+        agenda_status(&model.state)
+    };
+    widgets.status_label.set_text(&status);
 }
 
 fn build_event_calendar(
@@ -457,6 +555,8 @@ fn build_agenda_list(
     query: &AgendaQuery,
     state: &AgendaState,
     selected_day: Option<NaiveDate>,
+    authenticating: bool,
+    sender: ComponentSender<AgendaApp>,
 ) -> gtk::Box {
     let right = gtk::Box::new(gtk::Orientation::Vertical, 10);
     right.set_hexpand(true);
@@ -492,13 +592,13 @@ fn build_agenda_list(
         ));
     } else if let Some(error) = &state.error {
         if state.events.is_empty() {
-            list.append(&message_card(
-                "Could not read Google Calendar",
-                Some(error),
-                false,
-            ));
+            list.append(&auth_prompt_card(error, authenticating, sender));
         } else {
-            list.append(&message_card("Refresh failed", Some(error), false));
+            if needs_auth_action(error) {
+                list.append(&auth_prompt_card(error, authenticating, sender));
+            } else {
+                list.append(&message_card("Refresh failed", Some(error), false));
+            }
             for event in visible_events {
                 list.append(&event_card(event));
             }
@@ -526,6 +626,189 @@ fn build_agenda_list(
     scroll.set_child(Some(&list));
     right.append(&scroll);
     right
+}
+
+fn auth_prompt_card(
+    error: &str,
+    authenticating: bool,
+    sender: ComponentSender<AgendaApp>,
+) -> gtk::Box {
+    let card = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    card.add_css_class("empty-card");
+    card.add_css_class("auth-prompt");
+
+    card.append(&label(
+        "Connect Google Calendar",
+        &["event-title"],
+        0.0,
+        false,
+    ));
+    card.append(&label(error, &["muted"], 0.0, true));
+
+    card.append(&auth_status_rows());
+    card.append(&auth_credentials_form(authenticating, sender.clone()));
+
+    let primary_actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let start_auth = classed_button(
+        if authenticating {
+            "Authenticating"
+        } else {
+            "Start Authentication"
+        },
+        &["action-button"],
+    );
+    let refresh = classed_button("Refresh", &["action-button"]);
+    let open_config = classed_button("Open Config Folder", &["action-button"]);
+    let open_token = classed_button("Open Token Folder", &["action-button"]);
+    let open_cloud = classed_button("Google Cloud", &["action-button"]);
+
+    let secret_present = paths::client_secret_file().exists();
+    start_auth.set_sensitive(secret_present && !authenticating);
+    refresh.set_sensitive(!authenticating);
+
+    {
+        let sender = sender.clone();
+        start_auth.connect_clicked(move |_| sender.input(AgendaMsg::StartAuth));
+    }
+    {
+        let sender = sender.clone();
+        refresh.connect_clicked(move |_| sender.input(AgendaMsg::Refresh));
+    }
+    {
+        let sender = sender.clone();
+        open_config.connect_clicked(move |_| sender.input(AgendaMsg::OpenConfigDir));
+    }
+    {
+        let sender = sender.clone();
+        open_token.connect_clicked(move |_| sender.input(AgendaMsg::OpenTokenDir));
+    }
+    {
+        let sender = sender.clone();
+        open_cloud.connect_clicked(move |_| sender.input(AgendaMsg::OpenGoogleCloud));
+    }
+
+    primary_actions.append(&start_auth);
+    primary_actions.append(&refresh);
+    card.append(&primary_actions);
+
+    let secondary_actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    secondary_actions.add_css_class("auth-secondary-actions");
+    secondary_actions.append(&open_config);
+    secondary_actions.append(&open_token);
+    secondary_actions.append(&open_cloud);
+    card.append(&secondary_actions);
+    card
+}
+
+fn auth_credentials_form(authenticating: bool, sender: ComponentSender<AgendaApp>) -> gtk::Box {
+    let form = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    form.add_css_class("auth-form");
+
+    form.append(&label("OAuth client", &["event-title"], 0.0, false));
+
+    let client_id = credential_entry("Client ID");
+    let client_secret = credential_entry("Client Secret");
+    client_secret.set_visibility(false);
+
+    form.append(&field_row("Client ID", &client_id));
+    form.append(&field_row("Client Secret", &client_secret));
+
+    let save = classed_button("Save & Authenticate", &["action-button"]);
+    save.set_sensitive(!authenticating);
+    {
+        let client_id = client_id.clone();
+        let client_secret = client_secret.clone();
+        save.connect_clicked(move |_| {
+            sender.input(AgendaMsg::SaveAndStartAuth {
+                client_id: client_id.text().trim().to_string(),
+                client_secret: client_secret.text().trim().to_string(),
+            });
+        });
+    }
+    form.append(&save);
+    form
+}
+
+fn credential_entry(placeholder: &str) -> gtk::Entry {
+    let entry = gtk::Entry::new();
+    entry.add_css_class("text-entry");
+    entry.set_placeholder_text(Some(placeholder));
+    entry.set_hexpand(true);
+    entry
+}
+
+fn field_row(title: &str, entry: &gtk::Entry) -> gtk::Box {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title = label(title, &["field-label"], 0.0, false);
+    title.set_size_request(104, -1);
+    row.append(&title);
+    row.append(entry);
+    row
+}
+
+fn auth_status_rows() -> gtk::Box {
+    let rows = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    rows.add_css_class("settings-card");
+    rows.add_css_class("embedded-auth-status");
+
+    let secret = paths::client_secret_file();
+    rows.append(&auth_status_row(
+        "OAuth client secret",
+        &secret,
+        secret.exists(),
+    ));
+
+    let token = paths::oauth_token_file();
+    rows.append(&auth_status_row("Token cache", &token, token.exists()));
+    rows
+}
+
+fn auth_status_row(title: &str, path: &Path, present: bool) -> gtk::Box {
+    let row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    row.add_css_class("settings-row");
+
+    let text = gtk::Box::new(gtk::Orientation::Vertical, 2);
+    text.set_hexpand(true);
+    text.append(&label(title, &["event-title"], 0.0, false));
+    let path_label = label(
+        &path.display().to_string(),
+        &["path-label", "muted"],
+        0.0,
+        false,
+    );
+    path_label.set_selectable(true);
+    text.append(&path_label);
+
+    let badge = label("", &["status-badge"], 0.5, false);
+    if present {
+        badge.set_text("Ready");
+        badge.add_css_class("success");
+    } else {
+        badge.set_text("Missing");
+        badge.add_css_class("warning");
+    }
+
+    row.append(&text);
+    row.append(&badge);
+    row
+}
+
+fn open_dir(path: &Path) -> Result<(), String> {
+    fs::create_dir_all(path)
+        .map_err(|err| format!("Could not create folder {}: {err}", path.display()))?;
+    let file = gio::File::for_path(path);
+    let uri = file.uri();
+    google::open_external_uri(uri.as_str())
+}
+
+fn needs_auth_action(error: &str) -> bool {
+    let error = error.to_ascii_lowercase();
+    error.contains("oauth")
+        || error.contains("client secret")
+        || error.contains("not authenticated")
+        || error.contains("access token")
+        || error.contains("invalid_grant")
+        || error.contains("401")
 }
 
 fn range_label(range: DateRange) -> String {

@@ -5,10 +5,14 @@ use chrono::{Datelike, Local, NaiveDate, TimeZone};
 use chrono_tz::Tz;
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use reqwest::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
+use std::future::Future;
+use std::path::PathBuf;
+use std::pin::Pin;
 use std::time::Duration;
+use yup_oauth2::authenticator_delegate::InstalledFlowDelegate;
 use yup_oauth2::{InstalledFlowAuthenticator, InstalledFlowReturnMethod};
 
 const CALENDAR_SCOPE: &str = "https://www.googleapis.com/auth/calendar.readonly";
@@ -24,6 +28,41 @@ pub fn auth_calendar() -> Result<(), String> {
 
 pub fn fetch_events(query: &AgendaQuery, range: DateRange) -> Result<Vec<Event>, String> {
     runtime()?.block_on(fetch_events_async(query, range))
+}
+
+pub fn save_client_secret(client_id: &str, client_secret: &str) -> Result<PathBuf, String> {
+    let client_id = client_id.trim();
+    let client_secret = client_secret.trim();
+    if client_id.is_empty() {
+        return Err("Client ID is empty.".to_string());
+    }
+    if client_secret.is_empty() {
+        return Err("Client Secret is empty.".to_string());
+    }
+
+    let secret_file = paths::client_secret_file();
+    if let Some(parent) = secret_file.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("Could not create folder {}: {err}", parent.display()))?;
+    }
+
+    let payload = ClientSecretFile {
+        installed: InstalledClientSecret {
+            client_id,
+            project_id: "",
+            auth_uri: "https://accounts.google.com/o/oauth2/auth",
+            token_uri: "https://oauth2.googleapis.com/token",
+            auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+            client_secret,
+            redirect_uris: &["http://localhost"],
+        },
+    };
+    let json = serde_json::to_string_pretty(&payload)
+        .map_err(|err| format!("Could not build Google OAuth client secret JSON: {err}"))?;
+    fs::write(&secret_file, json)
+        .map_err(|err| format!("Could not write {}: {err}", secret_file.display()))?;
+    secure_file(&secret_file);
+    Ok(secret_file)
 }
 
 async fn fetch_events_async(query: &AgendaQuery, range: DateRange) -> Result<Vec<Event>, String> {
@@ -63,7 +102,7 @@ async fn access_token(timeout: u64, require_existing_token: bool) -> Result<Stri
     let secret_file = paths::client_secret_file();
     if !secret_file.exists() {
         return Err(format!(
-            "Missing Google OAuth client secret. Put it at {} or set WAYBAR_GCAL_CLIENT_SECRET, then run `waybar-gcal auth`.",
+            "Missing Google OAuth client secret. Paste Client ID and Client Secret in the app, put the JSON at {}, or set WAYBAR_GCAL_CLIENT_SECRET.",
             secret_file.display()
         ));
     }
@@ -71,7 +110,7 @@ async fn access_token(timeout: u64, require_existing_token: bool) -> Result<Stri
     let token_file = paths::oauth_token_file();
     if require_existing_token && !token_file.exists() {
         return Err(
-            "Google Calendar is not authenticated. Run `waybar-gcal auth` first.".to_string(),
+            "Google Calendar is not authenticated. Start authentication from the app or run `waybar-gcal auth` first.".to_string(),
         );
     }
 
@@ -89,6 +128,7 @@ async fn access_token(timeout: u64, require_existing_token: bool) -> Result<Stri
         })?;
 
     let auth = InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
+        .flow_delegate(Box::new(BrowserFlowDelegate))
         .persist_tokens_to_disk(token_file)
         .with_timeout(Duration::from_secs(timeout))
         .build()
@@ -223,6 +263,26 @@ fn api_error_message(status: StatusCode, body: &str) -> String {
     format!("Google Calendar API returned {status}: {detail}")
 }
 
+pub fn open_external_uri(uri: &str) -> Result<(), String> {
+    gtk::gio::AppInfo::launch_default_for_uri(uri, None::<&gtk::gio::AppLaunchContext>)
+        .map_err(|err| format!("Could not open {uri}: {err}"))
+}
+
+struct BrowserFlowDelegate;
+
+impl InstalledFlowDelegate for BrowserFlowDelegate {
+    fn present_user_url<'a>(
+        &'a self,
+        url: &'a str,
+        _need_code: bool,
+    ) -> Pin<Box<dyn Future<Output = Result<String, String>> + Send + 'a>> {
+        Box::pin(async move {
+            open_external_uri(url)?;
+            Ok(String::new())
+        })
+    }
+}
+
 fn range_boundary(date: NaiveDate, timezone: Option<&str>) -> Result<String, String> {
     if let Some(timezone) = timezone {
         let tz = timezone
@@ -257,14 +317,18 @@ fn fetch_timeout() -> u64 {
 }
 
 fn secure_token_file() {
+    secure_file(&paths::oauth_token_file());
+}
+
+fn secure_file(path: &std::path::Path) {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
 
-        if let Ok(metadata) = fs::metadata(paths::oauth_token_file()) {
+        if let Ok(metadata) = fs::metadata(path) {
             let mut permissions = metadata.permissions();
             permissions.set_mode(0o600);
-            let _ = fs::set_permissions(paths::oauth_token_file(), permissions);
+            let _ = fs::set_permissions(path, permissions);
         }
     }
 }
@@ -350,4 +414,20 @@ struct GoogleErrorResponse {
 #[derive(Debug, Deserialize)]
 struct GoogleError {
     message: String,
+}
+
+#[derive(Serialize)]
+struct ClientSecretFile<'a> {
+    installed: InstalledClientSecret<'a>,
+}
+
+#[derive(Serialize)]
+struct InstalledClientSecret<'a> {
+    client_id: &'a str,
+    project_id: &'a str,
+    auth_uri: &'a str,
+    token_uri: &'a str,
+    auth_provider_x509_cert_url: &'a str,
+    client_secret: &'a str,
+    redirect_uris: &'a [&'a str],
 }

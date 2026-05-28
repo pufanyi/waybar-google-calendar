@@ -24,6 +24,10 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
     while index < args.len() {
         match args[index].as_str() {
             "auth" => return Ok(CliCommand::Auth),
+            "auth-ui" | "auth-gui" | "settings" => {
+                mode = Mode::Auth;
+                index += 1;
+            }
             "print-theme" => return Ok(CliCommand::PrintTheme),
             "agenda" => {
                 mode = Mode::Agenda;
@@ -84,6 +88,7 @@ pub fn print_help() {
   waybar-gcal agenda [--calendar NAME_OR_ID] [--timezone TZ] [--theme PATH]
   waybar-gcal month [--theme PATH]
   waybar-gcal auth
+  waybar-gcal auth-ui [--theme PATH]
   waybar-gcal print-theme
 
 Agenda:

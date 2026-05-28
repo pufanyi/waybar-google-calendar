@@ -9,6 +9,7 @@ clock module:
 - `waybar-gcal agenda --calendar Work --timezone Asia/Singapore` filters the agenda.
 - `waybar-gcal month` shows a local month calendar.
 - `waybar-gcal auth` starts Google Calendar OAuth authentication.
+- `waybar-gcal auth-ui` opens the graphical authentication helper.
 - `waybar-gcal print-theme` prints the built-in CSS theme.
 
 The UI is built with Relm4 on top of GTK4/libadwaita. Google Calendar access is
@@ -41,8 +42,12 @@ cargo build --release
 
 ## Authentication
 
-Create an OAuth desktop client in Google Cloud with the Calendar API enabled,
-then place the downloaded client secret JSON at:
+Create an OAuth desktop client in Google Cloud with the Calendar API enabled.
+On first launch, the agenda popup can save the OAuth client config for you:
+paste the Client ID and Client Secret into the embedded setup panel, then press
+`Save & Authenticate`.
+
+If you prefer using the downloaded JSON, place it at:
 
 ```text
 ~/.config/waybar-google-calendar/client_secret.json
@@ -60,8 +65,16 @@ Then authenticate:
 waybar-gcal auth
 ```
 
-Tokens are stored at
-`~/.local/share/waybar-google-calendar/oauth-token.json` by default.
+The generated token is stored at
+`~/.local/share/waybar-google-calendar/oauth-token.json` by default. This token
+is created by Google OAuth after browser login; it is not something users need
+to paste manually.
+
+The separate graphical helper remains available:
+
+```bash
+waybar-gcal auth-ui
+```
 
 ## Waybar
 
@@ -138,6 +151,8 @@ Important CSS classes:
 
 - `.panel`, `.topbar`, `.left-pane`
 - `.agenda-card`, `.empty-card`
+- `.settings-card`, `.settings-row`, `.status-badge`, `.path-label`, `.auth-prompt`
+- `.auth-form`, `.field-label`, `.text-entry`
 - `.title`, `.agenda-header`, `.month-title`, `.event-title`
 - `.muted`, `.subtle`, `.accent`
 - `.weekday`, `.date-cell`, `.day`
