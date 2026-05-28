@@ -1,0 +1,13 @@
+{
+  "clock": {
+    "format": "{:%m/%d %a  %I:%M %p}",
+    "tooltip-format": "<tt><small>{calendar}</small></tt>",
+    "on-click": "waybar-gcal agenda --days 7",
+    "on-click-right": "waybar-gcal month",
+    "calendar": {
+      "mode": "month",
+      "weeks-pos": "right",
+      "iso8601": true
+    }
+  }
+}

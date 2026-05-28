@@ -1,0 +1,179 @@
+* {
+  color: #1d1d1f;
+  font-family: "Noto Sans", "Noto Sans CJK SC", sans-serif;
+  font-weight: 500;
+}
+
+window {
+  background: transparent;
+}
+
+.panel {
+  background: rgba(248, 248, 250, 0.88);
+  border: 1px solid rgba(60, 60, 67, 0.18);
+  border-radius: 22px;
+  padding: 16px;
+  color: #1d1d1f;
+  box-shadow: 0 24px 58px rgba(0, 0, 0, 0.18);
+}
+
+.topbar {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(60, 60, 67, 0.12);
+  border-radius: 16px;
+  padding: 8px 10px;
+}
+
+.title,
+.agenda-header,
+.month-title,
+.event-title {
+  color: #1d1d1f;
+  font-weight: 700;
+}
+
+.month-title,
+.agenda-header {
+  font-size: 17px;
+}
+
+.muted {
+  color: #6e6e73;
+}
+
+.subtle {
+  color: #8e8e93;
+}
+
+.accent {
+  color: #007aff;
+  font-weight: 700;
+}
+
+.left-pane {
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(60, 60, 67, 0.12);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.weekday {
+  color: #007aff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.date-cell {
+  color: #1d1d1f;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.date-cell.weekend {
+  color: #6e6e73;
+}
+
+.date-cell.event-day {
+  color: #1d1d1f;
+  background: rgba(255, 204, 0, 0.24);
+}
+
+.date-cell.today,
+.day.today {
+  color: #ffffff;
+  background: #007aff;
+  font-weight: 700;
+}
+
+.agenda-card,
+.empty-card {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(60, 60, 67, 0.12);
+  border-radius: 16px;
+  padding: 11px 12px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.10);
+}
+
+.agenda-card:hover {
+  background: rgba(233, 242, 255, 0.92);
+  border-color: rgba(0, 122, 255, 0.26);
+}
+
+.event-date {
+  color: #007aff;
+  font-weight: 700;
+}
+
+.event-time {
+  color: #6e6e73;
+  font-weight: 600;
+}
+
+.pill {
+  color: #007aff;
+  background: rgba(0, 122, 255, 0.10);
+  border: 1px solid rgba(0, 122, 255, 0.18);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-weight: 600;
+}
+
+.nav-button,
+.action-button,
+.close-button {
+  background: rgba(120, 120, 128, 0.12);
+  border: 1px solid rgba(60, 60, 67, 0.10);
+  border-radius: 999px;
+  color: #1d1d1f;
+  font-weight: 700;
+  padding: 3px 10px;
+}
+
+.nav-button:hover,
+.action-button:hover {
+  background: rgba(0, 122, 255, 0.12);
+  color: #007aff;
+}
+
+.close-button {
+  color: #6e6e73;
+}
+
+.close-button:hover {
+  background: rgba(255, 59, 48, 0.14);
+  color: #ff3b30;
+}
+
+.day {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: #1d1d1f;
+  font-weight: 600;
+  padding: 0;
+}
+
+.day:hover {
+  background: rgba(0, 122, 255, 0.10);
+  border-color: rgba(0, 122, 255, 0.16);
+}
+
+.day.weekend {
+  color: #6e6e73;
+}
+
+.day.outside {
+  color: rgba(142, 142, 147, 0.42);
+}
+
+.day.selected {
+  background: rgba(0, 122, 255, 0.14);
+  border-color: rgba(0, 122, 255, 0.30);
+  color: #007aff;
+  font-weight: 700;
+}
+
+.day.today.selected {
+  background: #007aff;
+  color: #ffffff;
+}

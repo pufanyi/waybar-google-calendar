@@ -1,0 +1,28 @@
+/*
+  Example user theme override.
+
+  The app first loads the built-in theme, then appends this file. You only need
+  to override the classes you want to change.
+*/
+
+.panel {
+  background: rgba(246, 248, 255, 0.92);
+  border-color: rgba(60, 90, 160, 0.22);
+}
+
+.accent,
+.event-date,
+.weekday {
+  color: #0a84ff;
+}
+
+.pill {
+  color: #0a84ff;
+  background: rgba(10, 132, 255, 0.12);
+  border-color: rgba(10, 132, 255, 0.22);
+}
+
+.date-cell.today,
+.day.today {
+  background: #0a84ff;
+}
