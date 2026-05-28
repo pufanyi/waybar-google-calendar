@@ -1,6 +1,6 @@
 # waybar-google-calendar
 
-GTK4 Google Calendar popup for Waybar.
+GTK4/Relm4 Google Calendar popup for Waybar.
 
 This project provides a small native Linux desktop popup intended for Waybar's
 clock module:
@@ -10,8 +10,9 @@ clock module:
 - `waybar-gcal auth` starts Google Workspace CLI calendar authentication.
 - `waybar-gcal print-theme` prints the built-in CSS theme.
 
-The Google API integration is delegated to `googleworkspace-cli` (`gws`) so this
-project can focus on the Waybar popup UI, cache behavior, and desktop packaging.
+The UI is built with Relm4 on top of GTK4/libadwaita. The Google API integration
+is delegated to `googleworkspace-cli` (`gws`) so this project can focus on the
+Waybar popup UI, cache behavior, and desktop packaging.
 
 ## Dependencies
 

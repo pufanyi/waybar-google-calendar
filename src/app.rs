@@ -2,6 +2,7 @@ use crate::model::{Config, Mode};
 use crate::{agenda, month, paths, single_instance, theme};
 use adw::prelude::*;
 use gtk::gio;
+use relm4::RelmApp;
 use std::fs;
 
 const APP_ID: &str = "io.github.pufanyi.waybar_google_calendar";
@@ -29,15 +30,23 @@ pub fn run(config: Config) -> Result<(), String> {
         let _ = fs::remove_file(&pid_file_for_shutdown);
     });
 
-    app.connect_activate(move |app| {
+    app.connect_startup(move |_| {
         theme::apply_css(&css);
-        match config.mode {
-            Mode::Agenda => agenda::build_window(app, config.days),
-            Mode::Month => month::build_window(app),
-        }
     });
 
-    app.run_with_args::<&str>(&[]);
+    match config.mode {
+        Mode::Agenda => {
+            let relm: RelmApp<agenda::AgendaMsg> = RelmApp::from_app(app).with_args(Vec::new());
+            relm.allow_multiple_instances(true);
+            relm.run::<agenda::AgendaApp>(agenda::AgendaInit { days: config.days });
+        }
+        Mode::Month => {
+            let relm: RelmApp<month::MonthMsg> = RelmApp::from_app(app).with_args(Vec::new());
+            relm.allow_multiple_instances(true);
+            relm.run::<month::MonthApp>(());
+        }
+    }
+
     let _ = fs::remove_file(pid_file);
     Ok(())
 }

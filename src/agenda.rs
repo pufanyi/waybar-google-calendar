@@ -1,196 +1,207 @@
 use crate::cache::{cache_is_fresh, read_cache, write_cache};
-use crate::date::{event_days, format_day_label, format_time_label, parse_event_start};
+use crate::date::{
+    event_days, format_day_label, format_time_label, month_dates, parse_event_start,
+};
 use crate::gws::fetch_events;
 use crate::model::{AgendaResult, AgendaState, Event};
 use crate::ui::{add_escape_to_close, clear_box, label};
 use adw::prelude::*;
 use chrono::{DateTime, Datelike, Local, NaiveDate};
-use gtk::glib;
-use std::cell::RefCell;
+use relm4::{Component, ComponentParts, ComponentSender};
 use std::collections::BTreeSet;
-use std::rc::Rc;
-use std::sync::mpsc;
-use std::time::Duration;
 
-pub fn build_window(app: &adw::Application, days: u32) {
-    let window = adw::ApplicationWindow::builder()
-        .application(app)
-        .title("Google Calendar")
-        .default_width(900)
-        .default_height(500)
-        .resizable(false)
-        .build();
-    window.set_decorated(false);
-
-    let root = gtk::Box::new(gtk::Orientation::Vertical, 12);
-    root.add_css_class("panel");
-
-    let topbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    topbar.add_css_class("topbar");
-    topbar.append(&label("Google Calendar", &["title"], 0.0, false));
-
-    let status_label = label(
-        &Local::now().format("%a, %b %-d  %-I:%M %p").to_string(),
-        &["muted"],
-        0.0,
-        false,
-    );
-    topbar.append(&status_label);
-
-    let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    spacer.set_hexpand(true);
-    topbar.append(&spacer);
-
-    let refresh = gtk::Button::with_label("Refresh");
-    refresh.add_css_class("action-button");
-    topbar.append(&refresh);
-
-    let close = gtk::Button::with_label("x");
-    close.add_css_class("close-button");
-    {
-        let window = window.clone();
-        close.connect_clicked(move |_| window.close());
-    }
-    topbar.append(&close);
-    root.append(&topbar);
-
-    let content = gtk::Box::new(gtk::Orientation::Horizontal, 14);
-    root.append(&content);
-    window.set_content(Some(&root));
-    add_escape_to_close(&window);
-    window.present();
-
-    let initial_cache = read_cache(days);
-    let state = Rc::new(RefCell::new(match &initial_cache {
-        Some(cache) => AgendaState {
-            events: cache.events.clone(),
-            error: None,
-            fetched_at: Some(cache.fetched_at),
-            loading: false,
-            cached: true,
-        },
-        None => AgendaState {
-            events: Vec::new(),
-            error: None,
-            fetched_at: None,
-            loading: false,
-            cached: false,
-        },
-    }));
-
-    {
-        let content = content.clone();
-        let status_label = status_label.clone();
-        let refresh = refresh.clone();
-        let state = state.clone();
-        refresh.clone().connect_clicked(move |_| {
-            start_fetch(
-                days,
-                content.clone(),
-                status_label.clone(),
-                refresh.clone(),
-                state.clone(),
-            );
-        });
-    }
-
-    let should_fetch = initial_cache
-        .as_ref()
-        .map(|cache| !cache_is_fresh(cache.fetched_at))
-        .unwrap_or(true);
-    if should_fetch {
-        start_fetch(days, content, status_label, refresh, state);
-    } else {
-        render_agenda(&content, &status_label, &refresh, days, &state.borrow());
-    }
+#[derive(Debug)]
+pub struct AgendaInit {
+    pub days: u32,
 }
 
-fn start_fetch(
+#[derive(Debug)]
+pub struct AgendaApp {
     days: u32,
+    state: AgendaState,
+}
+
+#[derive(Debug)]
+pub enum AgendaMsg {
+    Refresh,
+}
+
+pub struct AgendaWidgets {
     content: gtk::Box,
     status_label: gtk::Label,
     refresh: gtk::Button,
-    state: Rc<RefCell<AgendaState>>,
-) {
-    if state.borrow().loading {
-        return;
-    }
-
-    {
-        let mut state = state.borrow_mut();
-        state.loading = true;
-        state.error = None;
-    }
-    render_agenda(&content, &status_label, &refresh, days, &state.borrow());
-
-    let (sender, receiver) = mpsc::channel();
-    std::thread::spawn(move || {
-        let result = match fetch_events(days) {
-            Ok(events) => AgendaResult {
-                events,
-                error: None,
-            },
-            Err(error) => AgendaResult {
-                events: Vec::new(),
-                error: Some(error),
-            },
-        };
-        let _ = sender.send(result);
-    });
-
-    glib::timeout_add_local(Duration::from_millis(80), move || {
-        match receiver.try_recv() {
-            Ok(result) => {
-                {
-                    let mut state = state.borrow_mut();
-                    state.loading = false;
-                    if let Some(error) = result.error {
-                        state.error = Some(error);
-                        state.cached = !state.events.is_empty();
-                    } else {
-                        let fetched_at = Local::now();
-                        write_cache(days, &result.events, fetched_at);
-                        state.events = result.events;
-                        state.error = None;
-                        state.fetched_at = Some(fetched_at);
-                        state.cached = false;
-                    }
-                }
-                render_agenda(&content, &status_label, &refresh, days, &state.borrow());
-                glib::ControlFlow::Break
-            }
-            Err(mpsc::TryRecvError::Empty) => glib::ControlFlow::Continue,
-            Err(mpsc::TryRecvError::Disconnected) => {
-                {
-                    let mut state = state.borrow_mut();
-                    state.loading = false;
-                    state.error = Some("Calendar refresh worker stopped unexpectedly.".to_string());
-                }
-                render_agenda(&content, &status_label, &refresh, days, &state.borrow());
-                glib::ControlFlow::Break
-            }
-        }
-    });
 }
 
-fn render_agenda(
-    content: &gtk::Box,
-    status_label: &gtk::Label,
-    refresh: &gtk::Button,
-    days: u32,
-    state: &AgendaState,
-) {
-    clear_box(content);
-    content.append(&build_event_calendar(&event_days(&state.events)));
-    content.append(&build_agenda_list(days, state));
+impl Component for AgendaApp {
+    type Init = AgendaInit;
+    type Input = AgendaMsg;
+    type Output = ();
+    type CommandOutput = AgendaResult;
+    type Root = adw::ApplicationWindow;
+    type Widgets = AgendaWidgets;
 
-    refresh.set_sensitive(!state.loading);
-    refresh.set_label(if state.loading {
+    fn init_root() -> Self::Root {
+        let root = adw::ApplicationWindow::builder()
+            .title("Google Calendar")
+            .default_width(900)
+            .default_height(500)
+            .resizable(false)
+            .build();
+        root.set_decorated(false);
+        root
+    }
+
+    fn init(
+        init: Self::Init,
+        root: Self::Root,
+        sender: ComponentSender<Self>,
+    ) -> ComponentParts<Self> {
+        let root_box = gtk::Box::new(gtk::Orientation::Vertical, 12);
+        root_box.add_css_class("panel");
+
+        let topbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+        topbar.add_css_class("topbar");
+        topbar.append(&label("Google Calendar", &["title"], 0.0, false));
+
+        let status_label = label(
+            &Local::now().format("%a, %b %-d  %-I:%M %p").to_string(),
+            &["muted"],
+            0.0,
+            false,
+        );
+        topbar.append(&status_label);
+
+        let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        spacer.set_hexpand(true);
+        topbar.append(&spacer);
+
+        let refresh = gtk::Button::with_label("Refresh");
+        refresh.add_css_class("action-button");
+        {
+            let sender = sender.clone();
+            refresh.connect_clicked(move |_| sender.input(AgendaMsg::Refresh));
+        }
+        topbar.append(&refresh);
+
+        let close = gtk::Button::with_label("x");
+        close.add_css_class("close-button");
+        {
+            let root = root.clone();
+            close.connect_clicked(move |_| root.close());
+        }
+        topbar.append(&close);
+        root_box.append(&topbar);
+
+        let content = gtk::Box::new(gtk::Orientation::Horizontal, 14);
+        root_box.append(&content);
+        root.set_content(Some(&root_box));
+        add_escape_to_close(&root);
+
+        let initial_cache = read_cache(init.days);
+        let state = match &initial_cache {
+            Some(cache) => AgendaState {
+                events: cache.events.clone(),
+                error: None,
+                fetched_at: Some(cache.fetched_at),
+                loading: false,
+                cached: true,
+            },
+            None => AgendaState {
+                events: Vec::new(),
+                error: None,
+                fetched_at: None,
+                loading: false,
+                cached: false,
+            },
+        };
+        let model = AgendaApp {
+            days: init.days,
+            state,
+        };
+
+        let mut widgets = AgendaWidgets {
+            content,
+            status_label,
+            refresh,
+        };
+        render_agenda(&model, &mut widgets);
+
+        let should_fetch = initial_cache
+            .as_ref()
+            .map(|cache| !cache_is_fresh(cache.fetched_at))
+            .unwrap_or(true);
+        if should_fetch {
+            sender.input(AgendaMsg::Refresh);
+        }
+
+        ComponentParts { model, widgets }
+    }
+
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+        match message {
+            AgendaMsg::Refresh => {
+                if self.state.loading {
+                    return;
+                }
+                self.state.loading = true;
+                self.state.error = None;
+
+                let days = self.days;
+                sender.spawn_oneshot_command(move || match fetch_events(days) {
+                    Ok(events) => AgendaResult {
+                        events,
+                        error: None,
+                    },
+                    Err(error) => AgendaResult {
+                        events: Vec::new(),
+                        error: Some(error),
+                    },
+                });
+            }
+        }
+    }
+
+    fn update_cmd(
+        &mut self,
+        result: Self::CommandOutput,
+        _sender: ComponentSender<Self>,
+        _root: &Self::Root,
+    ) {
+        self.state.loading = false;
+        if let Some(error) = result.error {
+            self.state.error = Some(error);
+            self.state.cached = !self.state.events.is_empty();
+        } else {
+            let fetched_at = Local::now();
+            write_cache(self.days, &result.events, fetched_at);
+            self.state.events = result.events;
+            self.state.error = None;
+            self.state.fetched_at = Some(fetched_at);
+            self.state.cached = false;
+        }
+    }
+
+    fn update_view(&self, widgets: &mut Self::Widgets, _sender: ComponentSender<Self>) {
+        render_agenda(self, widgets);
+    }
+}
+
+fn render_agenda(model: &AgendaApp, widgets: &mut AgendaWidgets) {
+    clear_box(&widgets.content);
+    widgets
+        .content
+        .append(&build_event_calendar(&event_days(&model.state.events)));
+    widgets
+        .content
+        .append(&build_agenda_list(model.days, &model.state));
+
+    widgets.refresh.set_sensitive(!model.state.loading);
+    widgets.refresh.set_label(if model.state.loading {
         "Refreshing"
     } else {
         "Refresh"
     });
-    status_label.set_text(&agenda_status(state));
+    widgets.status_label.set_text(&agenda_status(&model.state));
 }
 
 fn build_event_calendar(event_days: &BTreeSet<NaiveDate>) -> gtk::Box {
@@ -220,10 +231,7 @@ fn build_event_calendar(event_days: &BTreeSet<NaiveDate>) -> gtk::Box {
         grid.attach(&item, col as i32, 0, 1, 1);
     }
 
-    for (index, day) in crate::date::month_dates(today.year(), today.month())
-        .iter()
-        .enumerate()
-    {
+    for (index, day) in month_dates(today.year(), today.month()).iter().enumerate() {
         let row = index / 7 + 1;
         let col = index % 7;
         let text = if day.month() == today.month() {
