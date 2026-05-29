@@ -1,0 +1,32 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm --needed git nodejs rustup pkgconf gtk4 libadwaita
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features --locked -- -D warnings
