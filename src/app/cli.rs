@@ -1,4 +1,5 @@
 use crate::calendar::model::{Config, Mode};
+use crate::storage::settings::{UserSettings, read_settings};
 use std::env;
 use std::path::PathBuf;
 
@@ -11,15 +12,33 @@ pub enum CliCommand {
 }
 
 pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
+    parse_args_with_sources(args, read_settings(), env_string, env_path)
+}
+
+fn parse_args_with_sources<F, G>(
+    args: Vec<String>,
+    user_settings: UserSettings,
+    env_string: F,
+    env_path: G,
+) -> Result<CliCommand, String>
+where
+    F: Fn(&str) -> Option<String>,
+    G: Fn(&str) -> Option<PathBuf>,
+{
     if args.iter().any(|arg| arg == "-h" || arg == "--help") {
         return Ok(CliCommand::Help);
     }
 
     let mut mode = Mode::Agenda;
-    let user_settings = crate::storage::settings::read_settings();
-    let mut calendar = env_string("GCAL_CALENDAR").or(user_settings.calendar);
-    let mut timezone = env_string("GCAL_TIMEZONE").or(user_settings.timezone);
-    let mut theme_path = env_path("WAYBAR_GCAL_THEME").or(user_settings.theme_path);
+    let mut calendar = env_string("GCAL_CALENDAR")
+        .filter(|value| !value.is_empty())
+        .or(user_settings.calendar);
+    let mut timezone = env_string("GCAL_TIMEZONE")
+        .filter(|value| !value.is_empty())
+        .or(user_settings.timezone);
+    let mut theme_path = env_path("WAYBAR_GCAL_THEME")
+        .filter(|value| !value.as_os_str().is_empty())
+        .or(user_settings.theme_path);
 
     let mut index = 0;
     while index < args.len() {
@@ -125,4 +144,156 @@ fn env_path(name: &str) -> Option<PathBuf> {
             Some(PathBuf::from(value))
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::settings::Language;
+    use std::path::Path;
+
+    fn settings() -> UserSettings {
+        UserSettings {
+            calendar: Some("saved-calendar".to_string()),
+            timezone: Some("Asia/Singapore".to_string()),
+            theme_path: Some(PathBuf::from("/saved/theme.css")),
+            language: Some(Language::Chinese),
+        }
+    }
+
+    fn no_env_string(_: &str) -> Option<String> {
+        None
+    }
+
+    fn no_env_path(_: &str) -> Option<PathBuf> {
+        None
+    }
+
+    fn run_config(command: CliCommand) -> Config {
+        match command {
+            CliCommand::Run(config) => config,
+            other => panic!("expected run command, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn saved_settings_are_defaults_for_agenda() {
+        let config = run_config(
+            parse_args_with_sources(vec![], settings(), no_env_string, no_env_path).unwrap(),
+        );
+
+        assert_eq!(config.mode, Mode::Agenda);
+        assert_eq!(config.calendar.as_deref(), Some("saved-calendar"));
+        assert_eq!(config.timezone.as_deref(), Some("Asia/Singapore"));
+        assert_eq!(
+            config.theme_path.as_deref(),
+            Some(Path::new("/saved/theme.css"))
+        );
+    }
+
+    #[test]
+    fn environment_overrides_saved_settings() {
+        let config = run_config(
+            parse_args_with_sources(
+                vec![],
+                settings(),
+                |name| match name {
+                    "GCAL_CALENDAR" => Some("env-calendar".to_string()),
+                    "GCAL_TIMEZONE" => Some("UTC".to_string()),
+                    _ => None,
+                },
+                |name| match name {
+                    "WAYBAR_GCAL_THEME" => Some(PathBuf::from("/env/theme.css")),
+                    _ => None,
+                },
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(config.calendar.as_deref(), Some("env-calendar"));
+        assert_eq!(config.timezone.as_deref(), Some("UTC"));
+        assert_eq!(
+            config.theme_path.as_deref(),
+            Some(Path::new("/env/theme.css"))
+        );
+    }
+
+    #[test]
+    fn arguments_override_environment_and_saved_settings() {
+        let config = run_config(
+            parse_args_with_sources(
+                vec![
+                    "--calendar".to_string(),
+                    "arg-calendar".to_string(),
+                    "--timezone".to_string(),
+                    "Europe/London".to_string(),
+                    "--theme".to_string(),
+                    "/arg/theme.css".to_string(),
+                ],
+                settings(),
+                |name| match name {
+                    "GCAL_CALENDAR" => Some("env-calendar".to_string()),
+                    "GCAL_TIMEZONE" => Some("UTC".to_string()),
+                    _ => None,
+                },
+                |name| match name {
+                    "WAYBAR_GCAL_THEME" => Some(PathBuf::from("/env/theme.css")),
+                    _ => None,
+                },
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(config.calendar.as_deref(), Some("arg-calendar"));
+        assert_eq!(config.timezone.as_deref(), Some("Europe/London"));
+        assert_eq!(
+            config.theme_path.as_deref(),
+            Some(Path::new("/arg/theme.css"))
+        );
+    }
+
+    #[test]
+    fn empty_environment_values_do_not_override_saved_settings() {
+        let config = run_config(
+            parse_args_with_sources(
+                vec![],
+                settings(),
+                |name| match name {
+                    "GCAL_CALENDAR" | "GCAL_TIMEZONE" => Some(String::new()),
+                    _ => None,
+                },
+                |name| match name {
+                    "WAYBAR_GCAL_THEME" => Some(PathBuf::new()),
+                    _ => None,
+                },
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(config.calendar.as_deref(), Some("saved-calendar"));
+        assert_eq!(config.timezone.as_deref(), Some("Asia/Singapore"));
+        assert_eq!(
+            config.theme_path.as_deref(),
+            Some(Path::new("/saved/theme.css"))
+        );
+    }
+
+    #[test]
+    fn mode_commands_keep_saved_theme() {
+        let config = run_config(
+            parse_args_with_sources(
+                vec!["month".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .unwrap(),
+        );
+
+        assert_eq!(config.mode, Mode::Month);
+        assert_eq!(
+            config.theme_path.as_deref(),
+            Some(Path::new("/saved/theme.css"))
+        );
+    }
 }
