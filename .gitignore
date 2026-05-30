@@ -21,6 +21,5 @@ target
 #.idea/
 
 # Agents
-
 .agents/
 .antigravitycli/
