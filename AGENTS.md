@@ -37,6 +37,8 @@ Guidance for agents working in this repository.
   Relm4 wiring.
   Agenda rendering helpers live under `src/agenda/`:
   - `controller.rs`: agenda input and command handlers, event loading, month navigation.
+  - `settings.rs`: in-window settings panel composition, form wiring, localization,
+    and account status controls.
   - `auth_prompt.rs`: embedded OAuth/setup prompt composition.
   - `auth_prompt/`: setup page, credential form, auth status, and auth helper widgets.
   - `view.rs`: agenda popup composition.

@@ -5,6 +5,8 @@ mod calendar;
 mod google;
 mod month;
 mod storage;
+#[cfg(test)]
+mod test_env;
 mod ui;
 
 use app::cli::CliCommand;

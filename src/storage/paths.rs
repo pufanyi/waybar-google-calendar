@@ -64,10 +64,6 @@ pub fn pid_file(mode: Mode) -> PathBuf {
 mod tests {
     use super::*;
     use crate::calendar::model::Mode;
-    use std::sync::LazyLock;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     struct EnvGuard {
         _lock: std::sync::MutexGuard<'static, ()>,
@@ -76,7 +72,9 @@ mod tests {
 
     impl EnvGuard {
         fn new(keys: &[&'static str]) -> Self {
-            let lock = ENV_LOCK.lock().unwrap();
+            let lock = crate::test_env::ENV_LOCK
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
             let vars = keys.iter().map(|&key| (key, env::var_os(key))).collect();
             Self { _lock: lock, vars }
         }

@@ -136,9 +136,11 @@ impl AgendaApp {
             }
             AgendaMsg::OpenSettings => {
                 self.settings_msg = None;
+                self.settings_open = true;
             }
             AgendaMsg::CloseSettings => {
                 self.settings_msg = None;
+                self.settings_open = false;
             }
             AgendaMsg::SaveSettings {
                 calendar,
@@ -159,6 +161,7 @@ impl AgendaApp {
 
                 if let Err(err) = write_settings(&new_settings) {
                     self.settings_msg = Some(format!("Failed to save settings: {err}"));
+                    self.settings_open = true;
                 } else {
                     self.user_settings = new_settings;
                     self.query.calendar = self.user_settings.calendar.clone();
@@ -172,6 +175,7 @@ impl AgendaApp {
                     }
 
                     self.settings_msg = None;
+                    self.settings_open = false;
                     self.load_visible_range(sender, true);
                 }
             }

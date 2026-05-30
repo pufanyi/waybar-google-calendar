@@ -89,10 +89,6 @@ fn sanitize_key_part(value: &str) -> String {
 mod tests {
     use super::*;
     use std::path::PathBuf;
-    use std::sync::LazyLock;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     struct EnvGuard {
         _lock: std::sync::MutexGuard<'static, ()>,
@@ -103,7 +99,9 @@ mod tests {
 
     impl EnvGuard {
         fn new(name: &str) -> Self {
-            let lock = ENV_LOCK.lock().unwrap();
+            let lock = crate::test_env::ENV_LOCK
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
             let original_xdg = env::var_os("XDG_CACHE_HOME");
             let original_ttl = env::var_os("GCAL_CACHE_TTL");
             let temp_dir = env::temp_dir().join(format!("gcal-test-cache-{}", name));

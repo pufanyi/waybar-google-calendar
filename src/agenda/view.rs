@@ -16,6 +16,12 @@ pub(super) fn render(
     sender: ComponentSender<AgendaApp>,
 ) {
     clear_box(&widgets.content);
+    if model.settings_open {
+        widgets.content.append(&widgets.settings.panel);
+        update_topbar(model, widgets);
+        return;
+    }
+
     let focus_auth_prompt = auth_prompt::should_focus(&model.state, model.authenticating);
     let calendar_event_days = if focus_auth_prompt {
         BTreeSet::new()
@@ -41,17 +47,21 @@ pub(super) fn render(
 fn update_topbar(model: &AgendaApp, widgets: &AgendaWidgets) {
     widgets
         .refresh
-        .set_sensitive(!model.state.loading && !model.authenticating);
+        .set_sensitive(!model.settings_open && !model.state.loading && !model.authenticating);
     widgets
         .refresh
         .set_tooltip_text(Some(if model.authenticating {
             "Authenticating"
+        } else if model.settings_open {
+            "Settings open"
         } else if model.state.loading {
             "Refreshing"
         } else {
             "Refresh"
         }));
-    let status = if model.authenticating {
+    let status = if model.settings_open {
+        "Settings".to_string()
+    } else if model.authenticating {
         "Authenticating".to_string()
     } else {
         status::agenda(&model.state)

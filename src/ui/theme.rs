@@ -51,10 +51,6 @@ mod tests {
     use std::env;
     use std::fs;
     use std::path::PathBuf;
-    use std::sync::LazyLock;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
     struct EnvGuard {
         _lock: std::sync::MutexGuard<'static, ()>,
@@ -64,7 +60,9 @@ mod tests {
 
     impl EnvGuard {
         fn new(name: &str) -> Self {
-            let lock = ENV_LOCK.lock().unwrap();
+            let lock = crate::test_env::ENV_LOCK
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
             let original_config = env::var_os("XDG_CONFIG_HOME");
             let temp_dir = env::temp_dir().join(format!("gcal-test-theme-{}", name));
             let _ = fs::remove_dir_all(&temp_dir);
