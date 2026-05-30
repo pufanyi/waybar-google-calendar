@@ -127,12 +127,6 @@ impl AgendaApp {
                     "Google Calendar API page opened in your browser.",
                 );
             }
-            AgendaMsg::PreviousAuthPage => {
-                self.auth_page = self.auth_page.saturating_sub(1);
-            }
-            AgendaMsg::NextAuthPage => {
-                self.auth_page = (self.auth_page + 1).min(auth_prompt::LAST_PAGE);
-            }
         }
     }
 
@@ -181,7 +175,6 @@ impl AgendaApp {
         if self.authenticating {
             return;
         }
-        self.auth_page = auth_prompt::LAST_PAGE;
         self.authenticating = true;
         self.state.error = Some("Opening browser for Google OAuth...".to_string());
         sender.spawn_oneshot_command(|| AgendaCommandOutput::Auth(google::auth_calendar()));
@@ -198,7 +191,6 @@ impl AgendaApp {
         }
         match google::save_client_secret(&client_id, &client_secret) {
             Ok(path) => {
-                self.auth_page = auth_prompt::LAST_PAGE;
                 self.state.error = Some(format!(
                     "OAuth client saved to {}. Opening browser for Google OAuth...",
                     path.display()

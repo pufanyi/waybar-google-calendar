@@ -23,7 +23,6 @@ pub struct AgendaApp {
     calendar_month: u32,
     selected_day: Option<NaiveDate>,
     authenticating: bool,
-    auth_page: usize,
 }
 
 #[derive(Debug)]
@@ -45,8 +44,6 @@ pub enum AgendaMsg {
     OpenSetupGuide,
     OpenGoogleCloud,
     OpenCalendarApi,
-    PreviousAuthPage,
-    NextAuthPage,
 }
 
 #[derive(Debug)]
@@ -156,7 +153,6 @@ impl Component for AgendaApp {
             calendar_month: today.month(),
             selected_day: None,
             authenticating: false,
-            auth_page: auth_prompt::initial_wizard_page(),
         };
 
         let mut widgets = AgendaWidgets {

@@ -12,7 +12,6 @@ pub(super) fn build(
     state: &AgendaState,
     selected_day: Option<NaiveDate>,
     authenticating: bool,
-    auth_page: usize,
     sender: ComponentSender<AgendaApp>,
 ) -> gtk::Box {
     let right = gtk::Box::new(gtk::Orientation::Vertical, 10);
@@ -36,7 +35,6 @@ pub(super) fn build(
         state,
         selected_day,
         authenticating,
-        auth_page,
         focus_auth_prompt,
         visible_events,
         sender,
@@ -73,7 +71,6 @@ fn scrolling_body(
     state: &AgendaState,
     selected_day: Option<NaiveDate>,
     authenticating: bool,
-    auth_page: usize,
     focus_auth_prompt: bool,
     visible_events: Vec<&Event>,
     sender: ComponentSender<AgendaApp>,
@@ -85,7 +82,6 @@ fn scrolling_body(
         state,
         selected_day,
         authenticating,
-        auth_page,
         focus_auth_prompt,
         visible_events,
         sender,
@@ -97,7 +93,6 @@ fn body(
     state: &AgendaState,
     selected_day: Option<NaiveDate>,
     authenticating: bool,
-    auth_page: usize,
     focus_auth_prompt: bool,
     visible_events: Vec<&Event>,
     sender: ComponentSender<AgendaApp>,
@@ -107,7 +102,6 @@ fn body(
         list.append(&auth_prompt::prompt_card(
             state.error.as_deref().unwrap_or_default(),
             authenticating,
-            auth_page,
             sender,
         ));
     } else if state.loading && state.events.is_empty() {

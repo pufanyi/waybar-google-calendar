@@ -33,7 +33,6 @@ pub(super) fn render(
         &model.state,
         model.selected_day,
         model.authenticating,
-        model.auth_page,
         sender,
     ));
     update_topbar(model, widgets);

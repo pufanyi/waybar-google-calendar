@@ -36,14 +36,15 @@ Guidance for agents working in this repository.
   Relm4 wiring.
   Agenda rendering helpers live under `src/agenda/`:
   - `controller.rs`: agenda input and command handlers, event loading, month navigation.
-  - `auth_prompt.rs`: embedded OAuth/setup wizard composition.
-  - `auth_prompt/`: wizard pages, credential form, auth status, and auth helper widgets.
+  - `auth_prompt.rs`: embedded OAuth/setup prompt composition.
+  - `auth_prompt/`: setup page, credential form, auth status, and auth helper widgets.
   - `view.rs`: agenda popup composition.
   - `view/`: calendar pane, agenda list, event/message cards, and status text.
 - Google Calendar access is implemented with `yup-oauth2` and `reqwest`.
 - The built-in GTK CSS theme is `assets/themes/apple-light.css`.
-- The embedded Google OAuth setup guide is sourced from `docs/google-oauth.md`;
-  keep program setup text consistent with that file.
+- The Google OAuth setup prompt links to
+  `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
+  keep the linked doc accurate when setup behavior changes.
 
 ## Common Commands
 
@@ -86,8 +87,8 @@ Update `README.md` when a change affects:
 - High-level source layout that a human contributor would reasonably need.
 
 Update files in `docs/` when a user-facing workflow needs more detail than
-belongs in the README. If the app embeds or opens a doc, keep the app text and
-the doc in sync.
+belongs in the README. If the app links to a doc, keep the app text and the doc
+in sync.
 
 Do not update `AGENTS.md` for incidental implementation details that are already clear from nearby code.
 Do not update `README.md` for private refactors that do not change user-facing behavior or contributor-facing layout.
