@@ -88,6 +88,55 @@ fn sanitize_key_part(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
+    use std::sync::LazyLock;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+
+    struct EnvGuard {
+        _lock: std::sync::MutexGuard<'static, ()>,
+        original_xdg: Option<std::ffi::OsString>,
+        original_ttl: Option<std::ffi::OsString>,
+        temp_dir: PathBuf,
+    }
+
+    impl EnvGuard {
+        fn new(name: &str) -> Self {
+            let lock = ENV_LOCK.lock().unwrap();
+            let original_xdg = env::var_os("XDG_CACHE_HOME");
+            let original_ttl = env::var_os("GCAL_CACHE_TTL");
+            let temp_dir = env::temp_dir().join(format!("gcal-test-cache-{}", name));
+            let _ = fs::remove_dir_all(&temp_dir);
+            unsafe {
+                env::set_var("XDG_CACHE_HOME", &temp_dir);
+            }
+            Self {
+                _lock: lock,
+                original_xdg,
+                original_ttl,
+                temp_dir,
+            }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            unsafe {
+                if let Some(v) = &self.original_xdg {
+                    env::set_var("XDG_CACHE_HOME", v);
+                } else {
+                    env::remove_var("XDG_CACHE_HOME");
+                }
+                if let Some(v) = &self.original_ttl {
+                    env::set_var("GCAL_CACHE_TTL", v);
+                } else {
+                    env::remove_var("GCAL_CACHE_TTL");
+                }
+            }
+            let _ = fs::remove_dir_all(&self.temp_dir);
+        }
+    }
 
     #[test]
     fn cache_key_includes_query_filters() {
@@ -104,5 +153,76 @@ mod tests {
             cache_key(&query, range),
             "2026-05-01-2026-06-01-cal-Work-Calendar-tz-Asia-Singapore"
         );
+    }
+
+    #[test]
+    fn test_cache_is_fresh() {
+        let _guard = EnvGuard::new("fresh");
+
+        let now = Local::now();
+        assert!(cache_is_fresh(now));
+
+        let old = now - chrono::Duration::seconds(CACHE_TTL_SECONDS + 10);
+        assert!(!cache_is_fresh(old));
+
+        // Test custom TTL override
+        unsafe {
+            env::set_var("GCAL_CACHE_TTL", "10");
+        }
+        assert!(cache_is_fresh(now - chrono::Duration::seconds(5)));
+        assert!(!cache_is_fresh(now - chrono::Duration::seconds(15)));
+    }
+
+    #[test]
+    fn test_read_write_cache_roundtrip() {
+        let _guard = EnvGuard::new("roundtrip");
+
+        let query = AgendaQuery {
+            calendar: Some("my-calendar".to_string()),
+            timezone: Some("UTC".to_string()),
+        };
+        let range = DateRange {
+            start: chrono::NaiveDate::from_ymd_opt(2026, 5, 30).unwrap(),
+            end_exclusive: chrono::NaiveDate::from_ymd_opt(2026, 5, 31).unwrap(),
+        };
+        let events = vec![Event {
+            summary: "Meeting".to_string(),
+            calendar: "my-calendar".to_string(),
+            location: "Office".to_string(),
+            start: "2026-05-30T10:00:00Z".to_string(),
+            end: "2026-05-30T11:00:00Z".to_string(),
+        }];
+
+        let fetched_at = Local::now();
+        write_cache(&query, range, &events, fetched_at);
+
+        let cached = read_cache(&query, range).expect("Should successfully read cache");
+        assert_eq!(cached.events.len(), 1);
+        assert_eq!(cached.events[0].summary, "Meeting");
+        assert_eq!(cached.fetched_at.timestamp(), fetched_at.timestamp());
+
+        // Check timezone mismatch
+        let query_diff_tz = AgendaQuery {
+            calendar: Some("my-calendar".to_string()),
+            timezone: Some("EST".to_string()),
+        };
+        assert!(read_cache(&query_diff_tz, range).is_none());
+
+        // Check range mismatch
+        let range_diff = DateRange {
+            start: chrono::NaiveDate::from_ymd_opt(2026, 5, 30).unwrap(),
+            end_exclusive: chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(),
+        };
+        assert!(read_cache(&query, range_diff).is_none());
+    }
+
+    #[test]
+    fn test_sanitize_key_part() {
+        assert_eq!(sanitize_key_part("abc-123_XYZ"), "abc-123_XYZ");
+        assert_eq!(
+            sanitize_key_part("hello/world@domain.com"),
+            "hello-world-domain-com"
+        );
+        assert_eq!(sanitize_key_part("---test---"), "test");
     }
 }
