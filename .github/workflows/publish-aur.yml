@@ -3,12 +3,11 @@ name: Publish AUR
 on:
   push:
     tags:
-      - "v*"
-      - "aur-v*"
+      - "v*-*"
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to publish, without the leading v"
+        description: "Package version, without the leading v"
         required: true
       pkgrel:
         description: "AUR package release number"
@@ -44,13 +43,10 @@ jobs:
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             version="${{ inputs.version }}"
             pkgrel="${{ inputs.pkgrel }}"
-          elif [[ "$GITHUB_REF_NAME" == aur-v* ]]; then
-            release="${GITHUB_REF_NAME#aur-v}"
+          else
+            release="${GITHUB_REF_NAME#v}"
             version="${release%-*}"
             pkgrel="${release##*-}"
-          else
-            version="${GITHUB_REF_NAME#v}"
-            pkgrel="1"
           fi
 
           if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+)*([._+][0-9A-Za-z]+)?$ ]]; then

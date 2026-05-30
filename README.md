@@ -205,16 +205,16 @@ The packaged default theme is also installed at:
 ## Packaging
 
 The AUR package draft lives in `packaging/aur`.
-Upstream `v*` tag pushes publish `pkgrel=1` automatically through the `Publish
-AUR` GitHub Actions workflow when the `AUR_SSH_PRIVATE_KEY` repository secret is
-configured with the full multiline private key.
+Package tag pushes in the form `v<pkgver>-<pkgrel>`, such as `v0.0.1-1`,
+publish automatically through the `Publish AUR` GitHub Actions workflow when
+the `AUR_SSH_PRIVATE_KEY` repository secret is configured with the full
+multiline private key.
 The workflow validates AUR SSH access before pushing and can initialize the AUR
 git repository on the first publish.
-For packaging-only fixes against an existing upstream tag, push an AUR package
-tag such as `aur-v0.0.1-2`; it publishes `pkgver=0.0.1`, `pkgrel=2`, and still
-uses the upstream `v0.0.1` source tarball.
+For packaging-only fixes against the same application version, push another
+package tag with an incremented release, such as `v0.0.1-2`.
 
-For manual publishing, create the release tag first, then run:
+For manual publishing, create the package tag first, then run:
 
 ```bash
 cd packaging/aur

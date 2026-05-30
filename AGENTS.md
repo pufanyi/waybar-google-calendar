@@ -47,9 +47,8 @@ Guidance for agents working in this repository.
   keep the linked doc accurate when setup behavior changes.
 - The AUR publishing workflow is `.github/workflows/publish-aur.yml`; it runs
   package metadata generation and AUR git pushes as the non-root `builder`
-  user. Upstream `v*` tags publish with `pkgrel=1`; AUR package tags such as
-  `aur-v0.0.1-2` publish packaging-only `pkgrel` updates while reusing the
-  upstream source tag.
+  user. Package tags use `v<pkgver>-<pkgrel>`, for example `v0.0.1-1` and
+  `v0.0.1-2`; packaging-only fixes increment only the `pkgrel` part.
 
 ## Common Commands
 
