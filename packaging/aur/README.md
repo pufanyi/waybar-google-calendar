@@ -5,7 +5,8 @@ This directory contains the AUR package metadata.
 ## Automatic publishing
 
 The GitHub Actions workflow `.github/workflows/publish-aur.yml` publishes this
-package to AUR when a `v*` tag is pushed.
+package to AUR when an upstream `v*` tag or an AUR `aur-v*` package tag is
+pushed.
 
 Required GitHub repository secret:
 
@@ -21,17 +22,18 @@ Release flow:
 4. The workflow updates `pkgver`, uses `pkgrel=1`, runs `updpkgsums`,
    generates `.SRCINFO`, and pushes `PKGBUILD` plus `.SRCINFO` to AUR.
 
-For packaging-only fixes that reuse the same upstream tag, run the workflow
-manually with the same version and an incremented `pkgrel`, for example
-`version=0.0.1` and `pkgrel=2`.
+For packaging-only fixes that reuse the same upstream tag, push an AUR package
+tag with the incremented package release, for example `aur-v0.0.1-2`. The
+workflow publishes `pkgver=0.0.1` and `pkgrel=2` while still downloading the
+upstream `v0.0.1` source tarball.
 
 The workflow validates the private key with `ssh-keygen`, checks AUR SSH access
 with `ssh -T aur.archlinux.org help`, and initializes the AUR git repository on
 the first publish if it does not exist yet.
 
-The workflow can also be run manually with a version input, but the matching
-GitHub tag must already exist because the AUR source URL downloads the tag
-tarball.
+The workflow can also be run manually with version and `pkgrel` inputs, but the
+matching upstream GitHub tag must already exist because the AUR source URL
+downloads the upstream tag tarball.
 
 The package disables makepkg LTO with `options=('!lto')` because the Rust
 `ring` dependency links C/assembly objects and can fail under makepkg LTO with
