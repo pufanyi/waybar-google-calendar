@@ -144,6 +144,7 @@ impl AgendaApp {
                 calendar,
                 timezone,
                 theme_path,
+                language,
             } => {
                 use crate::storage::settings::{UserSettings, write_settings};
                 use std::path::PathBuf;
@@ -153,6 +154,7 @@ impl AgendaApp {
                     calendar: calendar.filter(|s| !s.is_empty()),
                     timezone: timezone.filter(|s| !s.is_empty()),
                     theme_path: theme_buf,
+                    language: Some(language),
                 };
 
                 if let Err(err) = write_settings(&new_settings) {

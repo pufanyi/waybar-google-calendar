@@ -109,6 +109,7 @@ The agenda popup features an interactive settings dialog accessible by clicking 
 
 - **Calendar & Timezone**: Set a specific Calendar Name/ID (e.g. `primary` or your workspace calendar ID) and timezone override. Saving changes will immediately re-fetch the Google Calendar events for the new configurations.
 - **Appearance**: Specify a custom CSS stylesheet theme file path. Upon saving, the theme is dynamically reloaded in the running application in real-time.
+- **Language**: Choose between English (default) and Chinese (中文). Saving changes dynamically localizes the entire interface in real-time.
 - **Google Account Status**: Check if the client secret and token files are present. You can:
   - **Log In**: Initiate Google OAuth login in your browser.
   - **Log Out**: Instantly delete the cached OAuth tokens and wipe local cached calendar data for security and privacy.
