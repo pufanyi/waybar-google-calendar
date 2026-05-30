@@ -52,12 +52,35 @@ Guidance for agents working in this repository.
   `pkgrel` part. The workflow publishes both `packaging/aur` and
   `packaging/aur-bin`.
 
+## AUR Publishing Notes
+
+- `packaging/aur/` is the source-build AUR package for
+  `waybar-google-calendar`.
+- `packaging/aur-bin/` is the prebuilt binary AUR package for
+  `waybar-google-calendar-bin`.
+- Both packages are published by `.github/workflows/publish-aur.yml` from the
+  same package tag format: `v<pkgver>-<pkgrel>`.
+- The source package downloads the GitHub tag tarball for the package tag, for
+  example `v0.0.1-4`.
+- The binary package downloads the GitHub Release asset built by the workflow,
+  for example `waybar-google-calendar-bin-0.0.1-4-x86_64.tar.zst`.
+- When changing AUR metadata, keep both package directories in sync where
+  applicable and update their README files if the release flow changes.
+- Do not move or rewrite published release tags. If a packaging-only fix is
+  needed for the same application version, increment `pkgrel` and publish a new
+  tag.
+- `waybar-google-calendar-bin` should continue to provide and conflict with
+  `waybar-google-calendar`.
+
 ## Common Commands
 
 - Format check: `cargo fmt --check`
 - Tests: `cargo test`
 - Build: `cargo build`
 - Release build: `cargo build --release`
+- GitHub Actions lint: `actionlint`
+- Source AUR metadata: `cd packaging/aur && makepkg --printsrcinfo`
+- Binary AUR metadata: `cd packaging/aur-bin && makepkg --printsrcinfo`
 
 Run `cargo fmt` before finalizing changes when formatting is needed.
 

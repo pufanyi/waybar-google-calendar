@@ -205,6 +205,12 @@ The packaged default theme is also installed at:
 ## Packaging
 
 The AUR package drafts live in `packaging/aur` and `packaging/aur-bin`.
+They publish two packages:
+
+- `waybar-google-calendar`: source build from the package tag tarball.
+- `waybar-google-calendar-bin`: prebuilt binary package from the GitHub Release
+  asset; it provides and conflicts with `waybar-google-calendar`.
+
 Package tag pushes in the form `v<pkgver>-<pkgrel>`, such as `v0.0.1-1`,
 publish automatically through the `Publish AUR` GitHub Actions workflow when
 the `AUR_SSH_PRIVATE_KEY` repository secret is configured with the full
@@ -212,13 +218,24 @@ multiline private key.
 The workflow builds the `waybar-google-calendar-bin` GitHub Release asset,
 validates AUR SSH access before pushing, and can initialize the AUR git
 repositories on first publish.
+
 For packaging-only fixes against the same application version, push another
 package tag with an incremented release, such as `v0.0.1-2`.
 
-For manual publishing, create the package tag first, then run:
+The binary asset name is:
+
+```text
+waybar-google-calendar-bin-<pkgver>-<pkgrel>-x86_64.tar.zst
+```
+
+For manual metadata updates, create the package tag first, then run:
 
 ```bash
 cd packaging/aur
+updpkgsums
+makepkg --printsrcinfo > .SRCINFO
+
+cd ../aur-bin
 updpkgsums
 makepkg --printsrcinfo > .SRCINFO
 ```
