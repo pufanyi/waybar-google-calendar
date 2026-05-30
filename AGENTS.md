@@ -46,9 +46,11 @@ Guidance for agents working in this repository.
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.
 - The AUR publishing workflow is `.github/workflows/publish-aur.yml`; it runs
-  package metadata generation and AUR git pushes as the non-root `builder`
-  user. Package tags use `v<pkgver>-<pkgrel>`, for example `v0.0.1-1` and
-  `v0.0.1-2`; packaging-only fixes increment only the `pkgrel` part.
+  binary release asset builds, package metadata generation, and AUR git pushes
+  as the non-root `builder` user. Package tags use `v<pkgver>-<pkgrel>`, for
+  example `v0.0.1-1` and `v0.0.1-2`; packaging-only fixes increment only the
+  `pkgrel` part. The workflow publishes both `packaging/aur` and
+  `packaging/aur-bin`.
 
 ## Common Commands
 

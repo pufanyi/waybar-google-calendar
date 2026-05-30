@@ -204,13 +204,14 @@ The packaged default theme is also installed at:
 
 ## Packaging
 
-The AUR package draft lives in `packaging/aur`.
+The AUR package drafts live in `packaging/aur` and `packaging/aur-bin`.
 Package tag pushes in the form `v<pkgver>-<pkgrel>`, such as `v0.0.1-1`,
 publish automatically through the `Publish AUR` GitHub Actions workflow when
 the `AUR_SSH_PRIVATE_KEY` repository secret is configured with the full
 multiline private key.
-The workflow validates AUR SSH access before pushing and can initialize the AUR
-git repository on the first publish.
+The workflow builds the `waybar-google-calendar-bin` GitHub Release asset,
+validates AUR SSH access before pushing, and can initialize the AUR git
+repositories on first publish.
 For packaging-only fixes against the same application version, push another
 package tag with an incremented release, such as `v0.0.1-2`.
 

@@ -1,7 +1,7 @@
 # Maintainer: Fanyi Pu <pufanyi@gmail.com>
 pkgname=waybar-google-calendar
 pkgver=0.0.1
-pkgrel=2
+pkgrel=3
 pkgdesc='GTK4/Relm4 Google Calendar popup for Waybar'
 arch=('x86_64')
 url='https://github.com/pufanyi/waybar-google-calendar'

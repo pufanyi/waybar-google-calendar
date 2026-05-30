@@ -15,7 +15,7 @@ on:
         default: "1"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   aur:
@@ -25,16 +25,13 @@ jobs:
       image: archlinux:base-devel
     env:
       AUR_HOME: /home/builder
-      AUR_WORKDIR: /tmp/aur-package
+      AUR_WORKDIR: /tmp/aur-packages
 
     steps:
       - name: Install dependencies
         run: |
-          pacman -Syu --noconfirm --needed git openssh pacman-contrib
+          pacman -Syu --noconfirm --needed git openssh pacman-contrib cargo gtk4 libadwaita zstd github-cli
           useradd -m builder
-
-      - name: Check out repository
-        uses: actions/checkout@v4
 
       - name: Resolve release version
         id: version
@@ -60,16 +57,57 @@ jobs:
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "pkgrel=$pkgrel" >> "$GITHUB_OUTPUT"
+          echo "release=${version}-${pkgrel}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${version}-${pkgrel}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.version.outputs.tag }}
+
+      - name: Build binary release archive
+        shell: bash
+        run: |
+          cargo build --locked --release
+
+          archive="waybar-google-calendar-bin-${{ steps.version.outputs.release }}-x86_64.tar.zst"
+          pkgroot="$(mktemp -d)"
+          install -Dm755 target/release/waybar-gcal "$pkgroot/usr/bin/waybar-gcal"
+          install -Dm644 LICENSE "$pkgroot/usr/share/licenses/waybar-google-calendar-bin/LICENSE"
+          install -Dm644 README.md "$pkgroot/usr/share/doc/waybar-google-calendar-bin/README.md"
+          install -Dm644 examples/waybar-clock.json "$pkgroot/usr/share/doc/waybar-google-calendar-bin/examples/waybar-clock.json"
+          install -Dm644 examples/custom-theme.css "$pkgroot/usr/share/doc/waybar-google-calendar-bin/examples/custom-theme.css"
+          install -Dm644 assets/themes/apple-light.css "$pkgroot/usr/share/waybar-google-calendar/themes/apple-light.css"
+          tar --zstd -cf "$archive" -C "$pkgroot" usr
+
+      - name: Publish GitHub release asset
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          archive="waybar-google-calendar-bin-${{ steps.version.outputs.release }}-x86_64.tar.zst"
+
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" "$archive" --clobber
+          else
+            gh release create "$tag" "$archive" --title "$tag" --notes "Release $tag" --verify-tag --latest=false
+          fi
 
       - name: Generate AUR metadata
         shell: bash
         run: |
-          sed -i \
-            -e "s/^pkgver=.*/pkgver=${{ steps.version.outputs.version }}/" \
-            -e "s/^pkgrel=.*/pkgrel=${{ steps.version.outputs.pkgrel }}/" \
-            packaging/aur/PKGBUILD
+          for package_dir in packaging/aur packaging/aur-bin; do
+            sed -i \
+              -e "s/^pkgver=.*/pkgver=${{ steps.version.outputs.version }}/" \
+              -e "s/^pkgrel=.*/pkgrel=${{ steps.version.outputs.pkgrel }}/" \
+              "$package_dir/PKGBUILD"
+          done
+
           chown -R builder:builder "$GITHUB_WORKSPACE"
-          runuser -u builder -- bash -lc "cd '$GITHUB_WORKSPACE/packaging/aur' && updpkgsums && makepkg --printsrcinfo > .SRCINFO"
+          for package_dir in packaging/aur packaging/aur-bin; do
+            runuser -u builder -- bash -lc "cd '$GITHUB_WORKSPACE/$package_dir' && updpkgsums && makepkg --printsrcinfo > .SRCINFO"
+          done
 
       - name: Configure AUR SSH
         shell: bash
@@ -105,28 +143,40 @@ jobs:
       - name: Push package to AUR
         shell: bash
         run: |
-          pkgname="$(. packaging/aur/PKGBUILD && printf '%s' "$pkgname")"
-          aur_url="ssh://aur@aur.archlinux.org/${pkgname}.git"
           export GIT_SSH_COMMAND="ssh -F $AUR_HOME/.ssh/config"
 
-          rm -rf "$AUR_WORKDIR"
-          if ! runuser -u builder -- env HOME="$AUR_HOME" GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git clone "$aur_url" "$AUR_WORKDIR"; then
-            echo "AUR repository does not exist yet; preparing first publish."
-            install -d -m 755 -o builder -g builder "$AUR_WORKDIR"
-            runuser -u builder -- git init --initial-branch=master "$AUR_WORKDIR"
-            runuser -u builder -- git -C "$AUR_WORKDIR" remote add origin "$aur_url"
-          fi
+          publish_package() {
+            local package_dir="$1"
+            local pkgname
+            local aur_url
+            local workdir
 
-          cp packaging/aur/PKGBUILD packaging/aur/.SRCINFO "$AUR_WORKDIR/"
-          chown builder:builder "$AUR_WORKDIR/PKGBUILD" "$AUR_WORKDIR/.SRCINFO"
-          runuser -u builder -- git -C "$AUR_WORKDIR" config user.name "github-actions[bot]"
-          runuser -u builder -- git -C "$AUR_WORKDIR" config user.email "github-actions[bot]@users.noreply.github.com"
-          runuser -u builder -- git -C "$AUR_WORKDIR" add PKGBUILD .SRCINFO
+            pkgname="$(. "$package_dir/PKGBUILD" && printf '%s' "$pkgname")"
+            aur_url="ssh://aur@aur.archlinux.org/${pkgname}.git"
+            workdir="$AUR_WORKDIR/$pkgname"
 
-          if runuser -u builder -- git -C "$AUR_WORKDIR" diff --cached --quiet; then
-            echo "AUR package is already up to date."
-            exit 0
-          fi
+            rm -rf "$workdir"
+            if ! runuser -u builder -- env HOME="$AUR_HOME" GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git clone "$aur_url" "$workdir"; then
+              echo "AUR repository $pkgname does not exist yet; preparing first publish."
+              install -d -m 755 -o builder -g builder "$workdir"
+              runuser -u builder -- git init --initial-branch=master "$workdir"
+              runuser -u builder -- git -C "$workdir" remote add origin "$aur_url"
+            fi
 
-          runuser -u builder -- git -C "$AUR_WORKDIR" commit -m "Release ${{ steps.version.outputs.version }}-${{ steps.version.outputs.pkgrel }}"
-          runuser -u builder -- env HOME="$AUR_HOME" GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git -C "$AUR_WORKDIR" push origin HEAD:master
+            cp "$package_dir/PKGBUILD" "$package_dir/.SRCINFO" "$workdir/"
+            chown builder:builder "$workdir/PKGBUILD" "$workdir/.SRCINFO"
+            runuser -u builder -- git -C "$workdir" config user.name "github-actions[bot]"
+            runuser -u builder -- git -C "$workdir" config user.email "github-actions[bot]@users.noreply.github.com"
+            runuser -u builder -- git -C "$workdir" add PKGBUILD .SRCINFO
+
+            if runuser -u builder -- git -C "$workdir" diff --cached --quiet; then
+              echo "AUR package $pkgname is already up to date."
+              return 0
+            fi
+
+            runuser -u builder -- git -C "$workdir" commit -m "Release ${{ steps.version.outputs.release }}"
+            runuser -u builder -- env HOME="$AUR_HOME" GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git -C "$workdir" push origin HEAD:master
+          }
+
+          publish_package packaging/aur
+          publish_package packaging/aur-bin
