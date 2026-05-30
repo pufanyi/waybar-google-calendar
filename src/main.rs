@@ -1,24 +1,19 @@
 mod agenda;
 mod app;
 mod auth_ui;
-mod cache;
-mod cli;
-mod date;
+mod calendar;
 mod google;
-mod model;
 mod month;
-mod paths;
-mod single_instance;
-mod theme;
+mod storage;
 mod ui;
 
-use cli::CliCommand;
+use app::cli::CliCommand;
 use std::env;
 
 fn main() {
-    match cli::parse_args(env::args().skip(1).collect()) {
-        Ok(CliCommand::Help) => cli::print_help(),
-        Ok(CliCommand::PrintTheme) => print!("{}", theme::builtin_css()),
+    match app::cli::parse_args(env::args().skip(1).collect()) {
+        Ok(CliCommand::Help) => app::cli::print_help(),
+        Ok(CliCommand::PrintTheme) => print!("{}", ui::theme::builtin_css()),
         Ok(CliCommand::Auth) => match google::auth_calendar() {
             Ok(()) => println!("Google Calendar authenticated."),
             Err(message) => {
@@ -34,7 +29,7 @@ fn main() {
         }
         Err(message) => {
             eprintln!("{message}");
-            cli::print_help();
+            app::cli::print_help();
             std::process::exit(2);
         }
     }

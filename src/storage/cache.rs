@@ -1,5 +1,7 @@
-use crate::model::{AgendaQuery, CACHE_TTL_SECONDS, CachePayload, CachedEvents, DateRange, Event};
-use crate::paths;
+use crate::calendar::model::{
+    AgendaQuery, CACHE_TTL_SECONDS, CachePayload, CachedEvents, DateRange, Event,
+};
+use crate::storage::paths;
 use chrono::{DateTime, Local};
 use std::env;
 use std::fs;

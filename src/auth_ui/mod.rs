@@ -1,5 +1,5 @@
 use crate::google;
-use crate::paths;
+use crate::storage::paths;
 use crate::ui::{add_escape_to_close, classed_button, label};
 use adw::prelude::*;
 use gtk::gio;

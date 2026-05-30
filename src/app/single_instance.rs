@@ -1,5 +1,5 @@
-use crate::model::Mode;
-use crate::paths;
+use crate::calendar::model::Mode;
+use crate::storage::paths;
 use std::fs;
 use std::io;
 use std::process::{Command, Stdio};

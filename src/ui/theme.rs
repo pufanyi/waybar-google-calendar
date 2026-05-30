@@ -1,9 +1,9 @@
-use crate::paths;
+use crate::storage::paths;
 use gtk::gdk;
 use std::fs;
 use std::path::Path;
 
-const BUILTIN_CSS: &str = include_str!("../assets/themes/apple-light.css");
+const BUILTIN_CSS: &str = include_str!("../../assets/themes/apple-light.css");
 
 pub fn builtin_css() -> &'static str {
     BUILTIN_CSS

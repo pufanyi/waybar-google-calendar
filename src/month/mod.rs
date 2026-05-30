@@ -1,4 +1,4 @@
-use crate::date::{month_dates, month_name};
+use crate::calendar::date::{month_dates, month_name};
 use crate::ui::{add_escape_to_close, classed_button, clear_grid, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};

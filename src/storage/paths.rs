@@ -1,4 +1,4 @@
-use crate::model::Mode;
+use crate::calendar::model::Mode;
 use std::env;
 use std::path::PathBuf;
 

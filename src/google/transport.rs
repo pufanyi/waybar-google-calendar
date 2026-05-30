@@ -1,0 +1,40 @@
+use super::types::GoogleErrorResponse;
+use reqwest::StatusCode;
+use serde::Deserialize;
+
+pub(super) async fn request_json<T: for<'de> Deserialize<'de>>(
+    request: reqwest::RequestBuilder,
+) -> Result<T, String> {
+    let response = request
+        .send()
+        .await
+        .map_err(|err| format!("Google Calendar request failed: {err}"))?;
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(api_error_message(status, &body));
+    }
+    response
+        .json::<T>()
+        .await
+        .map_err(|err| format!("Could not parse Google Calendar response: {err}"))
+}
+
+pub fn open_external_uri(uri: &str) -> Result<(), String> {
+    gtk::gio::AppInfo::launch_default_for_uri(uri, None::<&gtk::gio::AppLaunchContext>)
+        .map_err(|err| format!("Could not open {uri}: {err}"))
+}
+
+fn api_error_message(status: StatusCode, body: &str) -> String {
+    if let Ok(payload) = serde_json::from_str::<GoogleErrorResponse>(body)
+        && let Some(error) = payload.error
+    {
+        return format!("Google Calendar API returned {status}: {}", error.message);
+    }
+    let detail = body
+        .lines()
+        .find(|line| !line.trim().is_empty())
+        .unwrap_or("empty response")
+        .trim();
+    format!("Google Calendar API returned {status}: {detail}")
+}

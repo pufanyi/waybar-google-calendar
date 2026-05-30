@@ -1,4 +1,4 @@
-use crate::model::{DateRange, Event};
+use crate::calendar::model::{DateRange, Event};
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime};
 use std::collections::BTreeSet;
 

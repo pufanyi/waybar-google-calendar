@@ -1,5 +1,9 @@
-use crate::model::{Config, Mode};
-use crate::{agenda, auth_ui, month, paths, single_instance, theme};
+pub mod cli;
+mod single_instance;
+
+use crate::calendar::model::{AgendaQuery, Config, Mode};
+use crate::storage::paths;
+use crate::{agenda, auth_ui, month, ui};
 use adw::prelude::*;
 use gtk::gio;
 use relm4::RelmApp;
@@ -9,7 +13,7 @@ const APP_ID: &str = "io.github.pufanyi.waybar_google_calendar";
 
 pub fn run(config: Config) -> Result<(), String> {
     single_instance::toggle_existing_instance(config.mode)?;
-    let css = theme::load_css(config.theme_path.as_deref())?;
+    let css = ui::theme::load_css(config.theme_path.as_deref())?;
 
     let pid_file = paths::pid_file(config.mode);
     fs::write(&pid_file, std::process::id().to_string())
@@ -32,7 +36,7 @@ pub fn run(config: Config) -> Result<(), String> {
     });
 
     app.connect_startup(move |_| {
-        theme::apply_css(&css);
+        ui::theme::apply_css(&css);
     });
 
     match config.mode {
@@ -40,7 +44,7 @@ pub fn run(config: Config) -> Result<(), String> {
             let relm: RelmApp<agenda::AgendaMsg> = RelmApp::from_app(app).with_args(Vec::new());
             relm.allow_multiple_instances(true);
             relm.run::<agenda::AgendaApp>(agenda::AgendaInit {
-                query: crate::model::AgendaQuery {
+                query: AgendaQuery {
                     calendar: config.calendar,
                     timezone: config.timezone,
                 },
