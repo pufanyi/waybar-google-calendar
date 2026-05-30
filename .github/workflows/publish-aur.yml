@@ -9,6 +9,10 @@ on:
       version:
         description: "Version to publish, without the leading v"
         required: true
+      pkgrel:
+        description: "AUR package release number"
+        required: false
+        default: "1"
 
 permissions:
   contents: read
@@ -38,23 +42,30 @@ jobs:
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             version="${{ inputs.version }}"
+            pkgrel="${{ inputs.pkgrel }}"
           else
             version="${GITHUB_REF_NAME#v}"
+            pkgrel="1"
           fi
 
           if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+)*([._+-][0-9A-Za-z]+)?$ ]]; then
             echo "Invalid version: $version" >&2
             exit 1
           fi
+          if [[ ! "$pkgrel" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Invalid pkgrel: $pkgrel" >&2
+            exit 1
+          fi
 
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "pkgrel=$pkgrel" >> "$GITHUB_OUTPUT"
 
       - name: Generate AUR metadata
         shell: bash
         run: |
           sed -i \
             -e "s/^pkgver=.*/pkgver=${{ steps.version.outputs.version }}/" \
-            -e "s/^pkgrel=.*/pkgrel=1/" \
+            -e "s/^pkgrel=.*/pkgrel=${{ steps.version.outputs.pkgrel }}/" \
             packaging/aur/PKGBUILD
           chown -R builder:builder "$GITHUB_WORKSPACE"
           runuser -u builder -- bash -lc "cd '$GITHUB_WORKSPACE/packaging/aur' && updpkgsums && makepkg --printsrcinfo > .SRCINFO"
@@ -116,5 +127,5 @@ jobs:
             exit 0
           fi
 
-          runuser -u builder -- git -C "$AUR_WORKDIR" commit -m "Release ${{ steps.version.outputs.version }}"
+          runuser -u builder -- git -C "$AUR_WORKDIR" commit -m "Release ${{ steps.version.outputs.version }}-${{ steps.version.outputs.pkgrel }}"
           runuser -u builder -- env HOME="$AUR_HOME" GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git -C "$AUR_WORKDIR" push origin HEAD:master

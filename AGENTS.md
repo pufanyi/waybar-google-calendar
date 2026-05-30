@@ -46,7 +46,9 @@ Guidance for agents working in this repository.
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.
 - The AUR publishing workflow is `.github/workflows/publish-aur.yml`; it runs
-  package metadata generation and AUR git pushes as the non-root `builder` user.
+  package metadata generation and AUR git pushes as the non-root `builder`
+  user. Tag pushes publish with `pkgrel=1`; manual runs can set `pkgrel` for
+  packaging-only AUR fixes.
 
 ## Common Commands
 

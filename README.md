@@ -210,6 +210,8 @@ Actions workflow when the `AUR_SSH_PRIVATE_KEY` repository secret is configured
 with the full multiline private key.
 The workflow validates AUR SSH access before pushing and can initialize the AUR
 git repository on the first publish.
+For packaging-only fixes against an existing upstream tag, run the workflow
+manually with the same version and an incremented `pkgrel`.
 
 For manual publishing, create the release tag first, then run:
 

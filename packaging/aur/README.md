@@ -18,8 +18,12 @@ Release flow:
 1. Update the source version, for example `Cargo.toml`.
 2. Commit the source changes.
 3. Push a tag such as `v0.0.1`.
-4. The workflow updates `pkgver`, resets `pkgrel` to `1`, runs `updpkgsums`,
+4. The workflow updates `pkgver`, uses `pkgrel=1`, runs `updpkgsums`,
    generates `.SRCINFO`, and pushes `PKGBUILD` plus `.SRCINFO` to AUR.
+
+For packaging-only fixes that reuse the same upstream tag, run the workflow
+manually with the same version and an incremented `pkgrel`, for example
+`version=0.0.1` and `pkgrel=2`.
 
 The workflow validates the private key with `ssh-keygen`, checks AUR SSH access
 with `ssh -T aur.archlinux.org help`, and initializes the AUR git repository on
@@ -28,6 +32,10 @@ the first publish if it does not exist yet.
 The workflow can also be run manually with a version input, but the matching
 GitHub tag must already exist because the AUR source URL downloads the tag
 tarball.
+
+The package disables makepkg LTO with `options=('!lto')` because the Rust
+`ring` dependency links C/assembly objects and can fail under makepkg LTO with
+undefined `ring_core_*` symbols.
 
 ## Manual publishing
 
