@@ -26,6 +26,10 @@ pub fn config_theme_file() -> PathBuf {
     config_dir().join("style.css")
 }
 
+pub fn settings_file() -> PathBuf {
+    config_dir().join("config.json")
+}
+
 pub fn client_secret_file() -> PathBuf {
     env::var_os("WAYBAR_GCAL_CLIENT_SECRET")
         .map(PathBuf::from)

@@ -29,7 +29,7 @@ Guidance for agents working in this repository.
   - `src/auth_ui/`: standalone graphical authentication helper.
   - `src/calendar/`: calendar/domain model types, date helpers, and shared
     calendar navigation view state.
-  - `src/storage/`: filesystem paths and agenda cache.
+  - `src/storage/`: filesystem paths, agenda cache, and persistent user settings.
   - `src/google/`: Google Calendar API, OAuth, transport helpers, and response types.
   - `src/month/`: standalone local month calendar popup.
   - `src/ui/`: shared GTK widget helpers and theme loading.

@@ -60,7 +60,7 @@ pub fn cache_is_fresh(fetched_at: DateTime<Local>) -> bool {
     (Local::now() - fetched_at).num_seconds() <= ttl
 }
 
-fn cache_key(query: &AgendaQuery, range: DateRange) -> String {
+pub fn cache_key(query: &AgendaQuery, range: DateRange) -> String {
     let mut key = format!("{}-{}", range.start, range.end_exclusive);
     if let Some(calendar) = &query.calendar {
         key.push_str("-cal-");

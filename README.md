@@ -103,6 +103,23 @@ The separate graphical helper remains available:
 waybar-gcal auth-ui
 ```
 
+## Settings & Customization
+
+The agenda popup features an interactive settings dialog accessible by clicking the gear icon (Settings) in the top-right corner. It allows you to customize options directly from the UI without editing configuration files or restarting:
+
+- **Calendar & Timezone**: Set a specific Calendar Name/ID (e.g. `primary` or your workspace calendar ID) and timezone override. Saving changes will immediately re-fetch the Google Calendar events for the new configurations.
+- **Appearance**: Specify a custom CSS stylesheet theme file path. Upon saving, the theme is dynamically reloaded in the running application in real-time.
+- **Google Account Status**: Check if the client secret and token files are present. You can:
+  - **Log In**: Initiate Google OAuth login in your browser.
+  - **Log Out**: Instantly delete the cached OAuth tokens and wipe local cached calendar data for security and privacy.
+
+All GUI settings are saved persistently to a local JSON file:
+```text
+~/.config/waybar-google-calendar/config.json
+```
+
+These saved settings are loaded automatically upon startup and act as the fallback for all CLI commands unless overridden by explicit environment variables or CLI arguments.
+
 ## Waybar
 
 Use `examples/waybar-clock.json` as a starting point:

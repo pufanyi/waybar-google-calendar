@@ -16,9 +16,10 @@ pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
     }
 
     let mut mode = Mode::Agenda;
-    let mut calendar = env_string("GCAL_CALENDAR");
-    let mut timezone = env_string("GCAL_TIMEZONE");
-    let mut theme_path = env_path("WAYBAR_GCAL_THEME");
+    let user_settings = crate::storage::settings::read_settings();
+    let mut calendar = env_string("GCAL_CALENDAR").or(user_settings.calendar);
+    let mut timezone = env_string("GCAL_TIMEZONE").or(user_settings.timezone);
+    let mut theme_path = env_path("WAYBAR_GCAL_THEME").or(user_settings.theme_path);
 
     let mut index = 0;
     while index < args.len() {

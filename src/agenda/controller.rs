@@ -134,6 +134,65 @@ impl AgendaApp {
                     "Google Calendar API page opened in your browser.",
                 );
             }
+            AgendaMsg::OpenSettings => {
+                self.settings_msg = None;
+            }
+            AgendaMsg::CloseSettings => {
+                self.settings_msg = None;
+            }
+            AgendaMsg::SaveSettings {
+                calendar,
+                timezone,
+                theme_path,
+            } => {
+                use crate::storage::settings::{UserSettings, write_settings};
+                use std::path::PathBuf;
+
+                let theme_buf = theme_path.filter(|s| !s.is_empty()).map(PathBuf::from);
+                let new_settings = UserSettings {
+                    calendar: calendar.filter(|s| !s.is_empty()),
+                    timezone: timezone.filter(|s| !s.is_empty()),
+                    theme_path: theme_buf,
+                };
+
+                if let Err(err) = write_settings(&new_settings) {
+                    self.settings_msg = Some(format!("Failed to save settings: {err}"));
+                } else {
+                    self.user_settings = new_settings;
+                    self.query.calendar = self.user_settings.calendar.clone();
+                    self.query.timezone = self.user_settings.timezone.clone();
+
+                    // Dynamic theme reload
+                    if let Ok(css) =
+                        crate::ui::theme::load_css(self.user_settings.theme_path.as_deref())
+                    {
+                        crate::ui::theme::apply_css(&css);
+                    }
+
+                    self.settings_msg = None;
+                    self.load_visible_range(sender, true);
+                }
+            }
+            AgendaMsg::Logout => {
+                let token_file = paths::oauth_token_file();
+                if token_file.exists() {
+                    let _ = std::fs::remove_file(token_file);
+                }
+
+                // Clear active events and cache
+                let range = self.current_range();
+                let cache_file =
+                    paths::cache_file(&crate::storage::cache::cache_key(&self.query, range));
+                if cache_file.exists() {
+                    let _ = std::fs::remove_file(cache_file);
+                }
+
+                self.state.events.clear();
+                self.state.fetched_at = None;
+                self.state.cached = false;
+                self.state.error = Some("Logged out. Please authenticate.".to_string());
+                self.settings_msg = Some("Logged out successfully.".to_string());
+            }
         }
     }
 
