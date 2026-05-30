@@ -4,8 +4,9 @@ mod view;
 
 use crate::calendar::date::visible_month_range;
 use crate::calendar::model::{AgendaQuery, AgendaResult, AgendaState};
+use crate::calendar::view::CalendarViewMode;
 use crate::storage::cache::{cache_is_fresh, read_cache};
-use crate::ui::{add_escape_to_close, label};
+use crate::ui::{add_escape_to_close, icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
 use relm4::{Component, ComponentParts, ComponentSender};
@@ -21,6 +22,7 @@ pub struct AgendaApp {
     state: AgendaState,
     calendar_year: i32,
     calendar_month: u32,
+    calendar_view: CalendarViewMode,
     selected_day: Option<NaiveDate>,
     authenticating: bool,
 }
@@ -29,8 +31,11 @@ pub struct AgendaApp {
 pub enum AgendaMsg {
     Refresh,
     LoadVisibleRange,
-    PreviousMonth,
-    NextMonth,
+    PreviousCalendarPage,
+    NextCalendarPage,
+    CycleCalendarView,
+    SelectMonth(u32),
+    SelectYear(i32),
     Today,
     ClearSelection,
     SelectDay(NaiveDate),
@@ -101,16 +106,22 @@ impl Component for AgendaApp {
         spacer.set_hexpand(true);
         topbar.append(&spacer);
 
-        let refresh = gtk::Button::with_label("Refresh");
-        refresh.add_css_class("action-button");
+        let refresh = icon_button(
+            "view-refresh-symbolic",
+            &["action-button", "icon-button"],
+            "Refresh",
+        );
         {
             let sender = sender.clone();
             refresh.connect_clicked(move |_| sender.input(AgendaMsg::Refresh));
         }
         topbar.append(&refresh);
 
-        let close = gtk::Button::with_label("x");
-        close.add_css_class("close-button");
+        let close = icon_button(
+            "window-close-symbolic",
+            &["close-button", "icon-button"],
+            "Close",
+        );
         {
             let root = root.clone();
             close.connect_clicked(move |_| root.close());
@@ -151,6 +162,7 @@ impl Component for AgendaApp {
             state,
             calendar_year: today.year(),
             calendar_month: today.month(),
+            calendar_view: CalendarViewMode::Days,
             selected_day: None,
             authenticating: false,
         };

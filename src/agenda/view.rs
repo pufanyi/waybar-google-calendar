@@ -42,13 +42,15 @@ fn update_topbar(model: &AgendaApp, widgets: &AgendaWidgets) {
     widgets
         .refresh
         .set_sensitive(!model.state.loading && !model.authenticating);
-    widgets.refresh.set_label(if model.authenticating {
-        "Authenticating"
-    } else if model.state.loading {
-        "Refreshing"
-    } else {
-        "Refresh"
-    });
+    widgets
+        .refresh
+        .set_tooltip_text(Some(if model.authenticating {
+            "Authenticating"
+        } else if model.state.loading {
+            "Refreshing"
+        } else {
+            "Refresh"
+        }));
     let status = if model.authenticating {
         "Authenticating".to_string()
     } else {

@@ -25,6 +25,17 @@ pub fn classed_button(text: &str, classes: &[&str]) -> gtk::Button {
     widget
 }
 
+pub fn icon_button(icon_name: &str, classes: &[&str], tooltip: &str) -> gtk::Button {
+    let widget = gtk::Button::new();
+    let icon = gtk::Image::from_icon_name(icon_name);
+    widget.set_child(Some(&icon));
+    widget.set_tooltip_text(Some(tooltip));
+    for class in classes {
+        widget.add_css_class(class);
+    }
+    widget
+}
+
 pub fn clear_box(container: &gtk::Box) {
     while let Some(child) = container.first_child() {
         container.remove(&child);

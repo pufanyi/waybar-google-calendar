@@ -1,6 +1,7 @@
 use crate::agenda::{AgendaApp, AgendaMsg};
 use crate::calendar::date::{month_dates, month_name};
-use crate::ui::{classed_button, label};
+use crate::calendar::view::{CalendarViewMode, YEAR_GRID_COUNT, year_page_start};
+use crate::ui::{classed_button, icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
 use relm4::ComponentSender;
@@ -19,40 +20,116 @@ pub(super) fn build(
     pane.set_hexpand(false);
 
     pane.append(&header(model, sender.clone()));
-    pane.append(&day_grid(model, event_days, today, sender.clone()));
+    match model.calendar_view {
+        CalendarViewMode::Days => {
+            pane.append(&day_grid(model, event_days, today, sender.clone()));
+        }
+        CalendarViewMode::Months => {
+            pane.append(&month_grid(model, today, sender.clone()));
+        }
+        CalendarViewMode::Years => {
+            pane.append(&year_grid(model, today, sender.clone()));
+        }
+    }
     pane.append(&actions(model, today, sender));
     pane
 }
 
 fn header(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gtk::Box {
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-    let previous = classed_button("<", &["nav-button", "icon-button"]);
-    let next = classed_button(">", &["nav-button", "icon-button"]);
-    let title = label(
-        &format!(
-            "{} {}",
-            month_name(model.calendar_month),
-            model.calendar_year
-        ),
-        &["month-title"],
-        0.5,
-        false,
+    let previous = icon_button(
+        "go-previous-symbolic",
+        &["nav-button", "icon-button"],
+        previous_tooltip(model.calendar_view),
     );
+    let next = icon_button(
+        "go-next-symbolic",
+        &["nav-button", "icon-button"],
+        next_tooltip(model.calendar_view),
+    );
+    let title = title_button(model);
     title.set_hexpand(true);
 
     {
         let sender = sender.clone();
-        previous.connect_clicked(move |_| sender.input(AgendaMsg::PreviousMonth));
+        previous.connect_clicked(move |_| sender.input(AgendaMsg::PreviousCalendarPage));
     }
     {
         let sender = sender.clone();
-        next.connect_clicked(move |_| sender.input(AgendaMsg::NextMonth));
+        title.connect_clicked(move |_| sender.input(AgendaMsg::CycleCalendarView));
+    }
+    {
+        let sender = sender.clone();
+        next.connect_clicked(move |_| sender.input(AgendaMsg::NextCalendarPage));
     }
 
     header.append(&previous);
     header.append(&title);
     header.append(&next);
     header
+}
+
+fn title_button(model: &AgendaApp) -> gtk::Button {
+    let button = gtk::Button::new();
+    button.add_css_class("calendar-title-button");
+    button.set_tooltip_text(Some(title_tooltip(model.calendar_view)));
+
+    let content = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+    content.add_css_class("calendar-title-content");
+    content.set_halign(gtk::Align::Center);
+    content.set_valign(gtk::Align::Center);
+    content.append(&label(&title_text(model), &["month-title"], 0.5, false));
+
+    let icon_name = if model.calendar_view == CalendarViewMode::Years {
+        "go-up-symbolic"
+    } else {
+        "go-down-symbolic"
+    };
+    let icon = gtk::Image::from_icon_name(icon_name);
+    icon.add_css_class("calendar-title-icon");
+    content.append(&icon);
+
+    button.set_child(Some(&content));
+    button
+}
+
+fn title_text(model: &AgendaApp) -> String {
+    match model.calendar_view {
+        CalendarViewMode::Days => format!(
+            "{} {}",
+            month_name(model.calendar_month),
+            model.calendar_year
+        ),
+        CalendarViewMode::Months => model.calendar_year.to_string(),
+        CalendarViewMode::Years => {
+            let start = year_page_start(model.calendar_year);
+            format!("{}-{}", start, start + YEAR_GRID_COUNT - 1)
+        }
+    }
+}
+
+fn previous_tooltip(view: CalendarViewMode) -> &'static str {
+    match view {
+        CalendarViewMode::Days => "Previous month",
+        CalendarViewMode::Months => "Previous year",
+        CalendarViewMode::Years => "Previous years",
+    }
+}
+
+fn next_tooltip(view: CalendarViewMode) -> &'static str {
+    match view {
+        CalendarViewMode::Days => "Next month",
+        CalendarViewMode::Months => "Next year",
+        CalendarViewMode::Years => "Next years",
+    }
+}
+
+fn title_tooltip(view: CalendarViewMode) -> &'static str {
+    match view {
+        CalendarViewMode::Days => "Choose month",
+        CalendarViewMode::Months => "Choose year",
+        CalendarViewMode::Years => "Return to days",
+    }
 }
 
 fn day_grid(
@@ -93,6 +170,63 @@ fn day_grid(
         grid.attach(&item, col as i32, row as i32, 1, 1);
     }
 
+    grid
+}
+
+fn month_grid(
+    model: &AgendaApp,
+    today: NaiveDate,
+    sender: ComponentSender<AgendaApp>,
+) -> gtk::Grid {
+    let grid = picker_grid();
+    for month in 1..=12 {
+        let index = month - 1;
+        let item = classed_button(month_name(month), &["calendar-picker-cell"]);
+        item.set_size_request(84, 40);
+        if month == model.calendar_month {
+            item.add_css_class("selected");
+        }
+        if today.year() == model.calendar_year && today.month() == month {
+            item.add_css_class("today");
+        }
+
+        let sender = sender.clone();
+        item.connect_clicked(move |_| sender.input(AgendaMsg::SelectMonth(month)));
+
+        grid.attach(&item, (index % 3) as i32, (index / 3) as i32, 1, 1);
+    }
+    grid
+}
+
+fn year_grid(model: &AgendaApp, today: NaiveDate, sender: ComponentSender<AgendaApp>) -> gtk::Grid {
+    let grid = picker_grid();
+    let start = year_page_start(model.calendar_year);
+    for offset in 0..YEAR_GRID_COUNT {
+        let year = start + offset;
+        let item = classed_button(&year.to_string(), &["calendar-picker-cell"]);
+        item.set_size_request(84, 40);
+        if year == model.calendar_year {
+            item.add_css_class("selected");
+        }
+        if year == today.year() {
+            item.add_css_class("today");
+        }
+
+        let sender = sender.clone();
+        item.connect_clicked(move |_| sender.input(AgendaMsg::SelectYear(year)));
+
+        grid.attach(&item, offset % 3, offset / 3, 1, 1);
+    }
+    grid
+}
+
+fn picker_grid() -> gtk::Grid {
+    let grid = gtk::Grid::builder()
+        .column_spacing(7)
+        .row_spacing(7)
+        .build();
+    grid.add_css_class("calendar-picker-grid");
+    grid.set_halign(gtk::Align::Center);
     grid
 }
 

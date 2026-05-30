@@ -68,6 +68,14 @@ pub fn visible_month_range(year: i32, month: u32) -> DateRange {
     }
 }
 
+pub fn shift_month(year: i32, month: u32, delta: i32) -> (i32, u32) {
+    assert!((1..=12).contains(&month), "valid month");
+    let month_index = year * 12 + month as i32 - 1 + delta;
+    let shifted_year = month_index.div_euclid(12);
+    let shifted_month = month_index.rem_euclid(12) as u32 + 1;
+    (shifted_year, shifted_month)
+}
+
 pub fn month_name(month: u32) -> &'static str {
     match month {
         1 => "January",
@@ -122,5 +130,13 @@ mod tests {
             range.end_exclusive,
             NaiveDate::from_ymd_opt(2026, 6, 8).unwrap()
         );
+    }
+
+    #[test]
+    fn shifts_months_across_year_boundaries() {
+        assert_eq!(shift_month(2026, 1, -1), (2025, 12));
+        assert_eq!(shift_month(2026, 12, 1), (2027, 1));
+        assert_eq!(shift_month(2026, 5, -12), (2025, 5));
+        assert_eq!(shift_month(2026, 5, 12), (2027, 5));
     }
 }

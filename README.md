@@ -54,7 +54,8 @@ The source tree is grouped by responsibility:
 - `src/app/`: CLI parsing and single-instance process handling.
 - `src/agenda/`: Google Calendar agenda popup internals.
 - `src/auth_ui/`: standalone graphical authentication helper.
-- `src/calendar/`: shared calendar/date model and date helpers.
+- `src/calendar/`: shared calendar/date model, date helpers, and navigation
+  view state.
 - `src/google/`: Google OAuth and Calendar API access.
 - `src/month/`: standalone local month calendar popup.
 - `src/storage/`: cache and filesystem paths.
@@ -115,12 +116,13 @@ Use `examples/waybar-clock.json` as a starting point:
 }
 ```
 
-The agenda popup includes an interactive month pane. Use the arrow buttons to
-move between months, click a day to filter the agenda list, or use `All` and
+The agenda popup includes an interactive calendar pane. Use the chevron buttons
+to move through the current view, click the calendar title to switch from days
+to months and years, click a day to filter the agenda list, or use `All` and
 `Today` for quick selection. Events are fetched dynamically for the visible
 calendar grid, so changing months refreshes the Google Calendar range for that
-month. The standalone month popup supports month and year navigation plus day
-selection.
+month. The standalone month popup supports the same day, month, and year
+navigation.
 
 Agenda can also filter to a calendar name or ID:
 
@@ -183,6 +185,8 @@ Important CSS classes:
 - `.title`, `.agenda-header`, `.month-title`, `.event-title`
 - `.muted`, `.subtle`, `.accent`
 - `.weekday`, `.date-cell`, `.day`
+- `.calendar-title-button`, `.calendar-title-icon`, `.calendar-picker-grid`,
+  `.calendar-picker-cell`
 - `.event-date`, `.event-time`, `.pill`
 - `.nav-button`, `.action-button`, `.close-button`
 

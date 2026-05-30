@@ -27,7 +27,8 @@ Guidance for agents working in this repository.
 - Shared project modules are grouped by responsibility:
   - `src/app/`: CLI parsing and single-instance process handling.
   - `src/auth_ui/`: standalone graphical authentication helper.
-  - `src/calendar/`: calendar/domain model types and date helpers.
+  - `src/calendar/`: calendar/domain model types, date helpers, and shared
+    calendar navigation view state.
   - `src/storage/`: filesystem paths and agenda cache.
   - `src/google/`: Google Calendar API, OAuth, transport helpers, and response types.
   - `src/month/`: standalone local month calendar popup.

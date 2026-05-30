@@ -1,6 +1,7 @@
 use super::{AgendaApp, AgendaCommandOutput, AgendaMsg, auth_prompt};
-use crate::calendar::date::visible_month_range;
+use crate::calendar::date::{shift_month, visible_month_range};
 use crate::calendar::model::{AgendaResult, DateRange};
+use crate::calendar::view::{CalendarViewMode, YEAR_PAGE_STEP};
 use crate::google::{self, fetch_events};
 use crate::storage::cache::{cache_is_fresh, read_cache, write_cache};
 use crate::storage::paths;
@@ -65,14 +66,19 @@ impl AgendaApp {
             AgendaMsg::LoadVisibleRange => {
                 self.load_visible_range(sender, false);
             }
-            AgendaMsg::PreviousMonth => {
-                self.move_month(-1);
+            AgendaMsg::PreviousCalendarPage => {
+                self.move_calendar_page(-1);
                 self.load_visible_range(sender, false);
             }
-            AgendaMsg::NextMonth => {
-                self.move_month(1);
+            AgendaMsg::NextCalendarPage => {
+                self.move_calendar_page(1);
                 self.load_visible_range(sender, false);
             }
+            AgendaMsg::CycleCalendarView => {
+                self.calendar_view = self.calendar_view.next_level();
+            }
+            AgendaMsg::SelectMonth(month) => self.select_month(month, sender),
+            AgendaMsg::SelectYear(year) => self.select_year(year, sender),
             AgendaMsg::Today => {
                 self.select_today();
                 self.load_visible_range(sender, false);
@@ -84,6 +90,7 @@ impl AgendaApp {
                 let previous_range = self.current_range();
                 self.calendar_year = day.year();
                 self.calendar_month = day.month();
+                self.calendar_view = CalendarViewMode::Days;
                 self.selected_day = Some(day);
                 if self.current_range() != previous_range {
                     self.load_visible_range(sender, false);
@@ -150,24 +157,47 @@ impl AgendaApp {
         }
     }
 
+    fn move_calendar_page(&mut self, direction: i32) {
+        let month_delta = match self.calendar_view {
+            CalendarViewMode::Days => direction,
+            CalendarViewMode::Months => direction * 12,
+            CalendarViewMode::Years => direction * YEAR_PAGE_STEP * 12,
+        };
+        self.move_month(month_delta);
+    }
+
     fn move_month(&mut self, delta: i32) {
-        let month = self.calendar_month as i32 + delta;
-        if month < 1 {
-            self.calendar_month = 12;
-            self.calendar_year -= 1;
-        } else if month > 12 {
-            self.calendar_month = 1;
-            self.calendar_year += 1;
-        } else {
-            self.calendar_month = month as u32;
-        }
+        let (year, month) = shift_month(self.calendar_year, self.calendar_month, delta);
+        self.calendar_year = year;
+        self.calendar_month = month;
         self.selected_day = None;
+    }
+
+    fn select_month(&mut self, month: u32, sender: ComponentSender<Self>) {
+        let previous_range = self.current_range();
+        self.calendar_month = month;
+        self.calendar_view = CalendarViewMode::Days;
+        self.selected_day = None;
+        if self.current_range() != previous_range {
+            self.load_visible_range(sender, false);
+        }
+    }
+
+    fn select_year(&mut self, year: i32, sender: ComponentSender<Self>) {
+        let previous_range = self.current_range();
+        self.calendar_year = year;
+        self.calendar_view = CalendarViewMode::Months;
+        self.selected_day = None;
+        if self.current_range() != previous_range {
+            self.load_visible_range(sender, false);
+        }
     }
 
     fn select_today(&mut self) {
         let today = Local::now().date_naive();
         self.calendar_year = today.year();
         self.calendar_month = today.month();
+        self.calendar_view = CalendarViewMode::Days;
         self.selected_day = Some(today);
     }
 
