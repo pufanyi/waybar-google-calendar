@@ -10,7 +10,8 @@ package to AUR when a `v*` tag is pushed.
 Required GitHub repository secret:
 
 - `AUR_SSH_PRIVATE_KEY`: an SSH private key whose public key is registered in
-  the maintainer's AUR account.
+  the maintainer's AUR account. Paste the full multiline private key, including
+  the `BEGIN` and `END` lines.
 
 Release flow:
 
@@ -19,6 +20,10 @@ Release flow:
 3. Push a tag such as `v0.0.1`.
 4. The workflow updates `pkgver`, resets `pkgrel` to `1`, runs `updpkgsums`,
    generates `.SRCINFO`, and pushes `PKGBUILD` plus `.SRCINFO` to AUR.
+
+The workflow validates the private key with `ssh-keygen`, checks AUR SSH access
+with `ssh -T aur.archlinux.org help`, and initializes the AUR git repository on
+the first publish if it does not exist yet.
 
 The workflow can also be run manually with a version input, but the matching
 GitHub tag must already exist because the AUR source URL downloads the tag

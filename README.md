@@ -206,9 +206,12 @@ The packaged default theme is also installed at:
 
 The AUR package draft lives in `packaging/aur`.
 Tag pushes can publish it automatically through the `Publish AUR` GitHub
-Actions workflow when the `AUR_SSH_PRIVATE_KEY` repository secret is configured.
+Actions workflow when the `AUR_SSH_PRIVATE_KEY` repository secret is configured
+with the full multiline private key.
+The workflow validates AUR SSH access before pushing and can initialize the AUR
+git repository on the first publish.
 
-Before publishing, create a release tag and run:
+For manual publishing, create the release tag first, then run:
 
 ```bash
 cd packaging/aur

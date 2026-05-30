@@ -19,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: archlinux:base-devel
+    env:
+      AUR_HOME: /home/builder
+      AUR_WORKDIR: /tmp/aur-package
 
     steps:
       - name: Install dependencies
@@ -33,8 +36,8 @@ jobs:
         id: version
         shell: bash
         run: |
-          if [[ -n "${{ github.event.inputs.version }}" ]]; then
-            version="${{ github.event.inputs.version }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            version="${{ inputs.version }}"
           else
             version="${GITHUB_REF_NAME#v}"
           fi
@@ -66,35 +69,52 @@ jobs:
             exit 1
           fi
 
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
-          cat > ~/.ssh/config <<'EOF'
-          Host aur.archlinux.org
-            User aur
-            IdentityFile ~/.ssh/aur
-            IdentitiesOnly yes
-          EOF
-          chmod 600 ~/.ssh/config
+          install -d -m 700 -o builder -g builder "$AUR_HOME/.ssh"
+          printf '%s\n' "$AUR_SSH_PRIVATE_KEY" | tr -d '\r' > "$AUR_HOME/.ssh/aur"
+          chown builder:builder "$AUR_HOME/.ssh/aur"
+          chmod 600 "$AUR_HOME/.ssh/aur"
+          runuser -u builder -- ssh-keygen -y -f "$AUR_HOME/.ssh/aur" > /dev/null
+
+          ssh-keyscan -t ed25519 aur.archlinux.org > "$AUR_HOME/.ssh/known_hosts"
+          chmod 600 "$AUR_HOME/.ssh/known_hosts"
+          {
+            printf '%s\n' "Host aur.archlinux.org"
+            printf '%s\n' "  HostName aur.archlinux.org"
+            printf '%s\n' "  User aur"
+            printf '%s\n' "  IdentityFile $AUR_HOME/.ssh/aur"
+            printf '%s\n' "  IdentitiesOnly yes"
+            printf '%s\n' "  UserKnownHostsFile $AUR_HOME/.ssh/known_hosts"
+            printf '%s\n' "  StrictHostKeyChecking yes"
+          } > "$AUR_HOME/.ssh/config"
+          chown builder:builder "$AUR_HOME/.ssh/config" "$AUR_HOME/.ssh/known_hosts"
+          chmod 600 "$AUR_HOME/.ssh/config"
+          runuser -u builder -- env HOME="$AUR_HOME" ssh -F "$AUR_HOME/.ssh/config" -T aur.archlinux.org help
 
       - name: Push package to AUR
         shell: bash
         run: |
           pkgname="$(. packaging/aur/PKGBUILD && printf '%s' "$pkgname")"
-          rm -rf /tmp/aur-package
-          git clone "ssh://aur@aur.archlinux.org/${pkgname}.git" /tmp/aur-package
+          aur_url="ssh://aur@aur.archlinux.org/${pkgname}.git"
+          export GIT_SSH_COMMAND="ssh -F $AUR_HOME/.ssh/config"
 
-          cp packaging/aur/PKGBUILD packaging/aur/.SRCINFO /tmp/aur-package/
-          cd /tmp/aur-package
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add PKGBUILD .SRCINFO
+          rm -rf "$AUR_WORKDIR"
+          if ! runuser -u builder -- env HOME="$AUR_HOME" GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git clone "$aur_url" "$AUR_WORKDIR"; then
+            echo "AUR repository does not exist yet; preparing first publish."
+            install -d -m 755 -o builder -g builder "$AUR_WORKDIR"
+            runuser -u builder -- git init --initial-branch=master "$AUR_WORKDIR"
+            runuser -u builder -- git -C "$AUR_WORKDIR" remote add origin "$aur_url"
+          fi
 
-          if git diff --cached --quiet; then
+          cp packaging/aur/PKGBUILD packaging/aur/.SRCINFO "$AUR_WORKDIR/"
+          chown builder:builder "$AUR_WORKDIR/PKGBUILD" "$AUR_WORKDIR/.SRCINFO"
+          runuser -u builder -- git -C "$AUR_WORKDIR" config user.name "github-actions[bot]"
+          runuser -u builder -- git -C "$AUR_WORKDIR" config user.email "github-actions[bot]@users.noreply.github.com"
+          runuser -u builder -- git -C "$AUR_WORKDIR" add PKGBUILD .SRCINFO
+
+          if runuser -u builder -- git -C "$AUR_WORKDIR" diff --cached --quiet; then
             echo "AUR package is already up to date."
             exit 0
           fi
 
-          git commit -m "Release ${{ steps.version.outputs.version }}"
-          git push
+          runuser -u builder -- git -C "$AUR_WORKDIR" commit -m "Release ${{ steps.version.outputs.version }}"
+          runuser -u builder -- env HOME="$AUR_HOME" GIT_SSH_COMMAND="$GIT_SSH_COMMAND" git -C "$AUR_WORKDIR" push origin HEAD:master

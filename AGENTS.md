@@ -45,6 +45,8 @@ Guidance for agents working in this repository.
 - The Google OAuth setup prompt links to
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.
+- The AUR publishing workflow is `.github/workflows/publish-aur.yml`; it runs
+  package metadata generation and AUR git pushes as the non-root `builder` user.
 
 ## Common Commands
 
