@@ -45,6 +45,9 @@ Guidance for agents working in this repository.
   - `view/`: calendar pane, agenda list, event/message cards, and status text.
 - Google Calendar access is implemented with `yup-oauth2` and `reqwest`.
 - The built-in GTK CSS theme is `assets/themes/apple-light.css`.
+- The agenda settings panel uses settings-specific CSS classes such as
+  `.settings-panel`, `.settings-section`, `.settings-form-row`, and
+  `.settings-footer`; keep theme support in sync when changing that panel.
 - The Google OAuth setup prompt links to
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.

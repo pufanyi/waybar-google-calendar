@@ -197,7 +197,9 @@ Important CSS classes:
 
 - `.panel`, `.topbar`, `.left-pane`
 - `.agenda-card`, `.empty-card`
-- `.settings-card`, `.settings-row`, `.status-badge`, `.path-label`, `.auth-prompt`
+- `.settings-card`, `.settings-row`, `.settings-panel`, `.settings-topbar`
+- `.settings-section`, `.settings-form-row`, `.settings-footer`, `.settings-message`
+- `.status-badge`, `.path-label`, `.auth-prompt`
 - `.auth-current-status`, `.auth-wizard-page`, `.auth-step-actions`, `.auth-helper-actions`
 - `.auth-form`, `.auth-path-row`, `.field-label`, `.text-entry`
 - `.title`, `.agenda-header`, `.month-title`, `.event-title`

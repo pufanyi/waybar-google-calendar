@@ -237,6 +237,69 @@ tooltip label {
   padding-bottom: 4px;
 }
 
+.settings-panel {
+  min-height: 0;
+}
+
+.settings-topbar {
+  padding: 9px 10px;
+}
+
+.settings-title-box {
+  min-height: 30px;
+}
+
+.settings-title-icon,
+.settings-section-icon {
+  color: #007aff;
+  opacity: 0.86;
+}
+
+.settings-scroll {
+  background: transparent;
+  border: 0;
+}
+
+.settings-content {
+  padding: 1px 0;
+}
+
+.settings-section {
+  background: rgba(255, 255, 255, 0.70);
+  border: 1px solid rgba(60, 60, 67, 0.11);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+}
+
+.settings-section-header {
+  margin-bottom: 2px;
+  min-height: 28px;
+}
+
+.settings-form-row {
+  background: rgba(248, 248, 250, 0.60);
+  border: 1px solid rgba(60, 60, 67, 0.08);
+  border-radius: 11px;
+  min-height: 42px;
+  padding: 6px 8px;
+}
+
+.settings-inline-actions {
+  margin-top: 1px;
+}
+
+.settings-footer {
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(60, 60, 67, 0.10);
+  border-radius: 14px;
+  padding: 8px 10px;
+}
+
+.settings-message {
+  min-height: 30px;
+}
+
 .path-label {
   font-size: 12px;
 }
@@ -446,6 +509,18 @@ tooltip label {
 .action-button:hover {
   background: rgba(0, 122, 255, 0.12);
   color: #007aff;
+}
+
+.action-button.primary-action {
+  background: #007aff;
+  border-color: #007aff;
+  color: #ffffff;
+}
+
+.action-button.primary-action:hover {
+  background: #0a84ff;
+  border-color: #0a84ff;
+  color: #ffffff;
 }
 
 .action-button.selected {

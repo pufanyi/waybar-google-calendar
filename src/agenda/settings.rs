@@ -35,21 +35,29 @@ pub(super) fn build(
     sender: ComponentSender<AgendaApp>,
 ) -> SettingsWidgets {
     let panel = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    panel.add_css_class("settings-panel");
     panel.set_hexpand(true);
     panel.set_vexpand(true);
 
     let topbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     topbar.add_css_class("topbar");
+    topbar.add_css_class("settings-topbar");
 
+    let title_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    title_box.add_css_class("settings-title-box");
+    let title_icon = gtk::Image::from_icon_name("emblem-system-symbolic");
+    title_icon.add_css_class("settings-title-icon");
+    title_box.append(&title_icon);
     let title = label(translate(lang, "settings"), &["title"], 0.0, false);
-    topbar.append(&title);
+    title_box.append(&title);
+    topbar.append(&title_box);
 
     let top_spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     top_spacer.set_hexpand(true);
     topbar.append(&top_spacer);
 
     let close_button = icon_button(
-        "window-close-symbolic",
+        "go-previous-symbolic",
         &["close-button", "icon-button"],
         translate(lang, "close"),
     );
@@ -60,8 +68,8 @@ pub(super) fn build(
     topbar.append(&close_button);
     panel.append(&topbar);
 
-    let content = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    content.add_css_class("settings-card");
+    let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
+    content.add_css_class("settings-content");
 
     let cal_tz_title = label(
         translate(lang, "calendar_timezone"),
@@ -69,24 +77,25 @@ pub(super) fn build(
         0.0,
         false,
     );
-    content.append(&cal_tz_title);
+    let calendar_section = section(&cal_tz_title, "x-office-calendar-symbolic");
 
     let calendar_label = label(translate(lang, "calendar_id"), &["field-label"], 0.0, false);
     let calendar_entry = gtk::Entry::builder()
         .text(user_settings.calendar.as_deref().unwrap_or(""))
         .placeholder_text("primary")
         .build();
-    content.append(&field_row(&calendar_label, &calendar_entry));
+    calendar_section.append(&field_row(&calendar_label, &calendar_entry));
 
     let timezone_label = label(translate(lang, "timezone"), &["field-label"], 0.0, false);
     let timezone_entry = gtk::Entry::builder()
         .text(user_settings.timezone.as_deref().unwrap_or(""))
         .placeholder_text("Local")
         .build();
-    content.append(&field_row(&timezone_label, &timezone_entry));
+    calendar_section.append(&field_row(&timezone_label, &timezone_entry));
+    content.append(&calendar_section);
 
     let appearance_title = label(translate(lang, "appearance"), &["event-title"], 0.0, false);
-    content.append(&appearance_title);
+    let appearance_section = section(&appearance_title, "preferences-desktop-theme-symbolic");
 
     let theme_label = label(translate(lang, "theme_path"), &["field-label"], 0.0, false);
     let theme_entry = gtk::Entry::builder()
@@ -100,7 +109,7 @@ pub(super) fn build(
         )
         .placeholder_text("~/.config/waybar-google-calendar/style.css")
         .build();
-    content.append(&field_row(&theme_label, &theme_entry));
+    appearance_section.append(&field_row(&theme_label, &theme_entry));
 
     let language_label = label(translate(lang, "language"), &["field-label"], 0.0, false);
     let language_combo = gtk::ComboBoxText::new();
@@ -109,7 +118,8 @@ pub(super) fn build(
         lang,
         user_settings.language.unwrap_or_default(),
     );
-    content.append(&field_row(&language_label, &language_combo));
+    appearance_section.append(&field_row(&language_label, &language_combo));
+    content.append(&appearance_section);
 
     let account_title = label(
         translate(lang, "google_account"),
@@ -117,9 +127,10 @@ pub(super) fn build(
         0.0,
         false,
     );
-    content.append(&account_title);
+    let account_section = section(&account_title, "avatar-default-symbolic");
 
     let account_row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    account_row.add_css_class("settings-form-row");
     let account_status_label = label(
         translate(lang, "account_status"),
         &["path-label", "muted"],
@@ -130,9 +141,10 @@ pub(super) fn build(
     let account_status_badge = label("", &["status-badge"], 0.5, false);
     account_row.append(&account_status_label);
     account_row.append(&account_status_badge);
-    content.append(&account_row);
+    account_section.append(&account_row);
 
     let account_actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    account_actions.add_css_class("settings-inline-actions");
     let login_button = classed_button(translate(lang, "login"), &["action-button"]);
     let logout_button = classed_button(translate(lang, "logout"), &["action-button"]);
     {
@@ -145,18 +157,22 @@ pub(super) fn build(
     }
     account_actions.append(&login_button);
     account_actions.append(&logout_button);
-    content.append(&account_actions);
+    account_section.append(&account_actions);
+    content.append(&account_section);
 
     let scroll = gtk::ScrolledWindow::new();
+    scroll.add_css_class("settings-scroll");
     scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
     scroll.set_vexpand(true);
     scroll.set_child(Some(&content));
     panel.append(&scroll);
 
-    let message_label = label("", &["muted"], 0.0, true);
-    panel.append(&message_label);
-
     let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    buttons.add_css_class("settings-footer");
+    let message_label = label("", &["muted", "settings-message"], 0.0, true);
+    message_label.set_hexpand(true);
+    buttons.append(&message_label);
+
     let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     spacer.set_hexpand(true);
     buttons.append(&spacer);
@@ -169,6 +185,7 @@ pub(super) fn build(
     buttons.append(&cancel_button);
 
     let save_button = classed_button(translate(lang, "save"), &["action-button"]);
+    save_button.add_css_class("primary-action");
     {
         let sender = sender.clone();
         let calendar_entry = calendar_entry.clone();
@@ -308,8 +325,25 @@ pub(super) fn update_state(
     }
 }
 
+fn section(title: &gtk::Label, icon_name: &str) -> gtk::Box {
+    let section = gtk::Box::new(gtk::Orientation::Vertical, 8);
+    section.add_css_class("settings-section");
+
+    let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    header.add_css_class("settings-section-header");
+    let icon = gtk::Image::from_icon_name(icon_name);
+    icon.add_css_class("settings-section-icon");
+    header.append(&icon);
+    header.append(title);
+    section.append(&header);
+
+    section
+}
+
 fn field_row(label: &gtk::Label, input: &impl IsA<gtk::Widget>) -> gtk::Box {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
+    row.add_css_class("settings-form-row");
+    label.set_size_request(150, -1);
     row.append(label);
     input.as_ref().add_css_class("text-entry");
     input.as_ref().set_hexpand(true);
