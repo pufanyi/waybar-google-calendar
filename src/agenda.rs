@@ -459,7 +459,7 @@ impl Component for AgendaApp {
             calendar_view: CalendarViewMode::Days,
             selected_day: None,
             authenticating: false,
-            user_settings: user_settings,
+            user_settings,
             settings_msg: None,
         };
 
@@ -524,49 +524,47 @@ impl Component for AgendaApp {
         // Update topbar texts dynamically
         widgets
             .title_label
-            .set_text(&translate(lang, "google_calendar"));
+            .set_text(translate(lang, "google_calendar"));
         widgets
             .refresh
-            .set_tooltip_text(Some(&translate(lang, "refresh")));
+            .set_tooltip_text(Some(translate(lang, "refresh")));
         widgets
             .settings_button
-            .set_tooltip_text(Some(&translate(lang, "settings")));
+            .set_tooltip_text(Some(translate(lang, "settings")));
 
         // Update settings window labels dynamically
-        widgets
-            .settings_title
-            .set_text(&translate(lang, "settings"));
+        widgets.settings_title.set_text(translate(lang, "settings"));
         widgets
             .settings_cal_tz_title
-            .set_text(&translate(lang, "calendar_timezone"));
+            .set_text(translate(lang, "calendar_timezone"));
         widgets
             .settings_calendar_label
-            .set_text(&translate(lang, "calendar_id"));
+            .set_text(translate(lang, "calendar_id"));
         widgets
             .settings_timezone_label
-            .set_text(&translate(lang, "timezone"));
+            .set_text(translate(lang, "timezone"));
         widgets
             .settings_appearance_title
-            .set_text(&translate(lang, "appearance"));
+            .set_text(translate(lang, "appearance"));
         widgets
             .settings_theme_label
-            .set_text(&translate(lang, "theme_path"));
+            .set_text(translate(lang, "theme_path"));
         widgets
             .settings_language_label
-            .set_text(&translate(lang, "language"));
+            .set_text(translate(lang, "language"));
         widgets
             .settings_account_title
-            .set_text(&translate(lang, "google_account"));
+            .set_text(translate(lang, "google_account"));
         widgets
             .account_status_label
-            .set_text(&translate(lang, "account_status"));
+            .set_text(translate(lang, "account_status"));
 
         widgets
             .settings_cancel_button
-            .set_label(&translate(lang, "cancel"));
+            .set_label(translate(lang, "cancel"));
         widgets
             .settings_save_button
-            .set_label(&translate(lang, "save"));
+            .set_label(translate(lang, "save"));
 
         // Update settings dialog state
         let token_exists = paths::oauth_token_file().exists();
@@ -578,32 +576,32 @@ impl Component for AgendaApp {
         if self.authenticating {
             widgets
                 .account_status_badge
-                .set_text(&translate(lang, "authenticating"));
+                .set_text(translate(lang, "authenticating"));
             widgets.account_status_badge.add_css_class("info");
             widgets.login_button.set_sensitive(false);
             widgets.logout_button.set_sensitive(false);
             widgets
                 .login_button
-                .set_label(&translate(lang, "authenticating"));
+                .set_label(translate(lang, "authenticating"));
         } else if token_exists {
             widgets
                 .account_status_badge
-                .set_text(&translate(lang, "authenticated"));
+                .set_text(translate(lang, "authenticated"));
             widgets.account_status_badge.add_css_class("success");
             widgets.login_button.set_sensitive(false);
             widgets.logout_button.set_sensitive(true);
-            widgets.login_button.set_label(&translate(lang, "login"));
+            widgets.login_button.set_label(translate(lang, "login"));
         } else {
             widgets
                 .account_status_badge
-                .set_text(&translate(lang, "missing_token"));
+                .set_text(translate(lang, "missing_token"));
             widgets.account_status_badge.add_css_class("warning");
             widgets.login_button.set_sensitive(true);
             widgets.logout_button.set_sensitive(false);
-            widgets.login_button.set_label(&translate(lang, "login"));
+            widgets.login_button.set_label(translate(lang, "login"));
         }
 
-        widgets.logout_button.set_label(&translate(lang, "logout"));
+        widgets.logout_button.set_label(translate(lang, "logout"));
 
         if let Some(msg) = &self.settings_msg {
             let display_msg = match msg.as_str() {
