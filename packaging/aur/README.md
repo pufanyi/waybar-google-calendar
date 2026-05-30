@@ -5,7 +5,7 @@ This directory is a starting point for the AUR package.
 Before uploading to AUR:
 
 1. Commit the source changes.
-2. Create and push a release tag, for example `v0.1.0`.
+2. Create and push a release tag, for example `v0.0.1`.
 3. Run `updpkgsums` in this directory to replace `SKIP` with the real source checksum.
 4. Generate `.SRCINFO`:
 
