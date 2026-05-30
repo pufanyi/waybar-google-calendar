@@ -87,6 +87,7 @@ jobs:
         run: |
           tag="${{ steps.version.outputs.tag }}"
           archive="waybar-google-calendar-bin-${{ steps.version.outputs.release }}-x86_64.tar.zst"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
           if gh release view "$tag" > /dev/null 2>&1; then
             gh release upload "$tag" "$archive" --clobber
