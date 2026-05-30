@@ -72,6 +72,7 @@ before finishing.
 Update `AGENTS.md` when a change affects:
 
 - Build, test, formatting, packaging, or release commands.
+- GitHub Actions workflows, especially release or AUR publishing behavior.
 - Project structure, entrypoints, modes, or major module responsibilities.
 - Required environment variables, credentials, cache locations, or runtime dependencies.
 - UI/theming conventions or important CSS class names.

@@ -205,6 +205,8 @@ The packaged default theme is also installed at:
 ## Packaging
 
 The AUR package draft lives in `packaging/aur`.
+Tag pushes can publish it automatically through the `Publish AUR` GitHub
+Actions workflow when the `AUR_SSH_PRIVATE_KEY` repository secret is configured.
 
 Before publishing, create a release tag and run:
 
