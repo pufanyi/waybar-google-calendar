@@ -1,6 +1,44 @@
+/*
+  waybar-google-calendar — built-in "Apple Light" theme.
+
+  Palette is defined once below with @define-color. Re-defining any of these
+  names in your own theme file (loaded after this one) re-tints the whole app.
+  For example, dropping `@define-color accent #ff2d55;` into your override file
+  recolours every accent, focus ring, button and highlight at once.
+*/
+
+@define-color accent          #007aff;
+@define-color accent_bright   #0a84ff;
+@define-color accent_press    #0063d1;
+@define-color accent_soft     rgba(0, 122, 255, 0.10);
+@define-color accent_softer   rgba(0, 122, 255, 0.06);
+@define-color accent_ring     rgba(0, 122, 255, 0.16);
+
+@define-color ink             #1d1d1f;
+@define-color ink_muted       #6e6e73;
+@define-color ink_subtle      #8e8e93;
+
+@define-color hairline        rgba(60, 60, 67, 0.12);
+@define-color hairline_soft   rgba(60, 60, 67, 0.08);
+@define-color hairline_strong rgba(60, 60, 67, 0.18);
+
+@define-color fill_subtle     rgba(118, 118, 128, 0.08);
+@define-color fill_quiet      rgba(118, 118, 128, 0.12);
+
+@define-color success         #0a7f38;
+@define-color success_fill    rgba(52, 199, 89, 0.16);
+@define-color success_line    rgba(52, 199, 89, 0.26);
+@define-color warning         #b35c00;
+@define-color warning_fill    rgba(255, 149, 0, 0.16);
+@define-color warning_line    rgba(255, 149, 0, 0.26);
+@define-color danger          #ff3b30;
+@define-color danger_fill     rgba(255, 59, 48, 0.14);
+
+/* ----------------------------------------------------------------- base -- */
+
 * {
-  color: #1d1d1f;
-  font-family: "Noto Sans", "Noto Sans CJK SC", sans-serif;
+  color: @ink;
+  font-family: "Inter", "SF Pro Display", "Noto Sans", "Noto Sans CJK SC", sans-serif;
   font-weight: 500;
 }
 
@@ -12,9 +50,10 @@ tooltip,
 tooltip.background {
   background: rgba(29, 29, 31, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
+  border-radius: 9px;
   color: #ffffff;
-  padding: 5px 7px;
+  padding: 5px 8px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.30);
 }
 
 tooltip label {
@@ -23,27 +62,33 @@ tooltip label {
   font-weight: 600;
 }
 
+/* --------------------------------------------------------------- shells -- */
+
 .panel {
-  background: rgba(248, 248, 250, 0.92);
-  border: 1px solid rgba(60, 60, 67, 0.18);
-  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(252, 252, 254, 0.94), rgba(244, 245, 249, 0.92));
+  border: 1px solid rgba(60, 60, 67, 0.16);
+  border-radius: 22px;
   padding: 16px;
-  color: #1d1d1f;
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
+  color: @ink;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 24px 60px rgba(0, 0, 0, 0.20),
+    0 6px 16px rgba(0, 0, 0, 0.10);
 }
 
 .topbar {
-  background: rgba(255, 255, 255, 0.68);
-  border: 1px solid rgba(60, 60, 67, 0.12);
-  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.70);
+  border: 1px solid @hairline;
+  border-radius: 16px;
   padding: 8px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .title,
 .agenda-header,
 .month-title,
 .event-title {
-  color: #1d1d1f;
+  color: @ink;
   font-weight: 700;
 }
 
@@ -53,33 +98,36 @@ tooltip label {
 }
 
 .muted {
-  color: #6e6e73;
+  color: @ink_muted;
 }
 
 .subtle {
-  color: #8e8e93;
+  color: @ink_subtle;
 }
 
 .accent {
-  color: #007aff;
+  color: @accent;
   font-weight: 700;
 }
 
+/* --------------------------------------------------------- calendar pane -- */
+
 .left-pane {
-  background: rgba(255, 255, 255, 0.56);
-  border: 1px solid rgba(60, 60, 67, 0.12);
-  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.50));
+  border: 1px solid @hairline;
+  border-radius: 18px;
   padding: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .weekday {
-  color: #007aff;
+  color: @accent;
   font-weight: 700;
   font-size: 12px;
 }
 
 .date-cell {
-  color: #1d1d1f;
+  color: @ink;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 11px;
@@ -88,6 +136,7 @@ tooltip label {
   min-height: 34px;
   min-width: 34px;
   padding: 0;
+  transition: all 150ms ease;
 }
 
 .date-cell-content {
@@ -102,11 +151,12 @@ tooltip label {
 }
 
 .event-dot {
-  background: #007aff;
+  background: @accent;
   border-radius: 999px;
   min-height: 4px;
   min-width: 4px;
   margin-top: 1px;
+  transition: all 150ms ease;
 }
 
 .event-dot.empty {
@@ -114,12 +164,12 @@ tooltip label {
 }
 
 .date-cell:hover {
-  background: rgba(0, 122, 255, 0.10);
-  border-color: rgba(0, 122, 255, 0.16);
+  background: @accent_soft;
+  border-color: @accent_ring;
 }
 
 .date-cell.weekend {
-  color: #6e6e73;
+  color: @ink_muted;
 }
 
 .date-cell.outside {
@@ -127,25 +177,26 @@ tooltip label {
 }
 
 .date-cell.event-day {
-  color: #1d1d1f;
+  color: @ink;
 }
 
 .date-cell.today {
-  color: #007aff;
+  color: @accent;
   background: transparent;
   border-color: rgba(0, 122, 255, 0.35);
   font-weight: 700;
 }
 
 .date-cell.selected {
-  background: #007aff;
-  border-color: #007aff;
+  background: @accent;
+  border-color: @accent;
   color: #ffffff;
   font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.34);
 }
 
 .date-cell.today.selected {
-  background: #007aff;
+  background: @accent;
   color: #ffffff;
 }
 
@@ -162,13 +213,14 @@ tooltip label {
   border: 1px solid transparent;
   border-radius: 999px;
   box-shadow: none;
-  color: #1d1d1f;
+  color: @ink;
   min-height: 30px;
   padding: 2px 9px;
+  transition: all 150ms ease;
 }
 
 .calendar-title-button:hover {
-  background: rgba(0, 122, 255, 0.10);
+  background: @accent_soft;
   border-color: rgba(0, 122, 255, 0.12);
 }
 
@@ -177,7 +229,7 @@ tooltip label {
 }
 
 .calendar-title-icon {
-  color: #6e6e73;
+  color: @ink_muted;
   opacity: 0.72;
 }
 
@@ -190,45 +242,76 @@ tooltip label {
   border: 1px solid rgba(60, 60, 67, 0.10);
   border-radius: 12px;
   box-shadow: none;
-  color: #1d1d1f;
+  color: @ink;
   font-weight: 700;
   padding: 0 8px;
+  transition: all 150ms ease;
 }
 
 .calendar-picker-cell:hover {
-  background: rgba(0, 122, 255, 0.10);
-  border-color: rgba(0, 122, 255, 0.16);
+  background: @accent_soft;
+  border-color: @accent_ring;
 }
 
 .calendar-picker-cell.today {
   border-color: rgba(0, 122, 255, 0.35);
-  color: #007aff;
+  color: @accent;
 }
 
 .calendar-picker-cell.selected {
-  background: #007aff;
-  border-color: #007aff;
+  background: @accent;
+  border-color: @accent;
   color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.30);
 }
+
+/* ------------------------------------------------------------ event cards -- */
 
 .agenda-card,
 .empty-card,
 .settings-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(60, 60, 67, 0.12);
-  border-radius: 14px;
-  padding: 11px 12px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.80), rgba(255, 255, 255, 0.68));
+  border: 1px solid @hairline;
+  border-radius: 15px;
+  padding: 11px 13px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.60),
+    0 6px 16px rgba(0, 0, 0, 0.07);
+  transition: all 160ms ease;
 }
 
 .agenda-card:hover {
-  background: rgba(233, 242, 255, 0.92);
-  border-color: rgba(0, 122, 255, 0.26);
+  background: linear-gradient(180deg, rgba(236, 244, 255, 0.96), rgba(224, 237, 255, 0.92));
+  border-color: rgba(0, 122, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.70),
+    0 12px 26px rgba(0, 122, 255, 0.14);
 }
+
+.event-date {
+  color: @accent;
+  font-weight: 700;
+}
+
+.event-time {
+  color: @ink_muted;
+  font-weight: 600;
+}
+
+.pill {
+  color: @accent;
+  background: @accent_soft;
+  border: 1px solid rgba(0, 122, 255, 0.18);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------- settings -- */
 
 .settings-row {
   background: transparent;
-  border-bottom: 1px solid rgba(60, 60, 67, 0.10);
+  border-bottom: 1px solid @hairline_soft;
   padding: 4px 0 10px;
 }
 
@@ -246,13 +329,47 @@ tooltip label {
 }
 
 .settings-title-box {
+  min-height: 32px;
+}
+
+/* iOS-style rounded icon tile that sits behind each section glyph. */
+.settings-icon-tile {
+  border-radius: 9px;
+  min-width: 30px;
   min-height: 30px;
+  background: linear-gradient(165deg, #a9a9af, #6c6c72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 2px 5px rgba(0, 0, 0, 0.20);
+}
+
+.settings-icon-tile.tint-general {
+  background: linear-gradient(165deg, #a9a9af, #6c6c72);
+}
+
+.settings-icon-tile.tint-calendar {
+  background: linear-gradient(165deg, #ff8a5b, #ff3b30);
+}
+
+.settings-icon-tile.tint-appearance {
+  background: linear-gradient(165deg, #b072f3, #6f4bd8);
+}
+
+.settings-icon-tile.tint-account {
+  background: linear-gradient(165deg, #44d06a, #1aa64b);
 }
 
 .settings-title-icon,
 .settings-section-icon {
-  color: #007aff;
+  color: @accent;
   opacity: 0.86;
+  -gtk-icon-size: 16px;
+}
+
+.settings-icon-tile .settings-title-icon,
+.settings-icon-tile .settings-section-icon {
+  color: #ffffff;
+  opacity: 1;
 }
 
 .settings-scroll {
@@ -261,39 +378,53 @@ tooltip label {
 }
 
 .settings-content {
-  padding: 1px 0;
+  padding: 1px 2px;
 }
 
 .settings-section {
-  background: rgba(255, 255, 255, 0.70);
-  border: 1px solid rgba(60, 60, 67, 0.11);
-  border-radius: 14px;
-  padding: 12px;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.66));
+  border: 1px solid @hairline;
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    0 10px 22px rgba(0, 0, 0, 0.06);
 }
 
 .settings-section-header {
-  margin-bottom: 2px;
-  min-height: 28px;
+  margin-bottom: 4px;
+  min-height: 30px;
+}
+
+.settings-section-header label {
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .settings-form-row {
-  background: rgba(248, 248, 250, 0.60);
-  border: 1px solid rgba(60, 60, 67, 0.08);
-  border-radius: 11px;
-  min-height: 42px;
-  padding: 6px 8px;
+  background: @fill_subtle;
+  border: 1px solid @hairline_soft;
+  border-radius: 13px;
+  min-height: 46px;
+  padding: 7px 11px;
+  transition: all 160ms ease;
+}
+
+.settings-form-row:focus-within {
+  background: @accent_softer;
+  border-color: rgba(0, 122, 255, 0.30);
 }
 
 .settings-inline-actions {
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .settings-footer {
-  background: rgba(255, 255, 255, 0.64);
-  border: 1px solid rgba(60, 60, 67, 0.10);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid @hairline;
+  border-radius: 15px;
   padding: 8px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .settings-message {
@@ -303,6 +434,203 @@ tooltip label {
 .path-label {
   font-size: 12px;
 }
+
+.field-label {
+  color: @ink_muted;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.text-entry {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid @hairline_strong;
+  border-radius: 10px;
+  color: @ink;
+  min-height: 32px;
+  padding: 3px 11px;
+  transition: all 150ms ease;
+}
+
+.text-entry:hover {
+  border-color: rgba(60, 60, 67, 0.28);
+}
+
+.text-entry:focus,
+.text-entry:focus-within {
+  background: #ffffff;
+  border-color: @accent;
+  box-shadow: 0 0 0 3px @accent_ring;
+  outline: none;
+}
+
+/* ----------------------------------------------------------------- badges -- */
+
+.status-badge {
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-weight: 700;
+}
+
+.status-badge.success {
+  color: @success;
+  background: @success_fill;
+  border: 1px solid @success_line;
+}
+
+.status-badge.warning {
+  color: @warning;
+  background: @warning_fill;
+  border: 1px solid @warning_line;
+}
+
+.status-badge.info {
+  color: @accent;
+  background: @accent_soft;
+  border: 1px solid rgba(0, 122, 255, 0.20);
+}
+
+.status-badge.neutral {
+  color: @ink_muted;
+  background: @fill_quiet;
+  border: 1px solid @hairline;
+}
+
+/* ---------------------------------------------------------------- buttons -- */
+
+.nav-button,
+.action-button,
+.close-button {
+  background: @fill_quiet;
+  border: 1px solid @hairline_soft;
+  border-radius: 999px;
+  color: @ink;
+  font-weight: 700;
+  padding: 4px 12px;
+  transition: all 150ms ease;
+}
+
+.icon-button {
+  min-height: 30px;
+  min-width: 30px;
+  padding: 0;
+}
+
+.calendar-actions {
+  margin-top: 2px;
+}
+
+.nav-button:focus,
+.action-button:focus,
+.close-button:focus,
+.calendar-title-button:focus,
+.calendar-picker-cell:focus,
+.date-cell:focus,
+.day:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+.nav-button:hover,
+.action-button:hover {
+  background: @accent_soft;
+  border-color: @accent_ring;
+  color: @accent;
+}
+
+.nav-button:active,
+.action-button:active {
+  background: rgba(0, 122, 255, 0.18);
+  border-color: rgba(0, 122, 255, 0.30);
+  color: @accent_press;
+}
+
+.action-button.primary-action {
+  background: linear-gradient(180deg, #2a91ff, @accent);
+  border-color: rgba(0, 90, 200, 0.45);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 4px 12px rgba(0, 122, 255, 0.32);
+}
+
+.action-button.primary-action:hover {
+  background: linear-gradient(180deg, #3d9bff, @accent_bright);
+  border-color: rgba(0, 90, 200, 0.45);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 6px 16px rgba(0, 122, 255, 0.40);
+}
+
+.action-button.primary-action:active {
+  background: linear-gradient(180deg, @accent_bright, @accent_press);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 122, 255, 0.34);
+}
+
+.action-button.selected {
+  background: rgba(0, 122, 255, 0.14);
+  border-color: rgba(0, 122, 255, 0.30);
+  color: @accent;
+}
+
+.close-button {
+  color: @ink_muted;
+}
+
+.close-button:hover {
+  background: @danger_fill;
+  border-color: rgba(255, 59, 48, 0.22);
+  color: @danger;
+}
+
+/* -------------------------------------------------------- month-view days -- */
+
+.day {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  box-shadow: none;
+  color: @ink;
+  font-weight: 600;
+  padding: 0;
+  transition: all 150ms ease;
+}
+
+.day:hover {
+  background: @accent_soft;
+  border-color: @accent_ring;
+}
+
+.day.weekend {
+  color: @ink_muted;
+}
+
+.day.outside {
+  color: rgba(142, 142, 147, 0.58);
+}
+
+.day.today {
+  color: @accent;
+  background: transparent;
+  border-color: rgba(0, 122, 255, 0.35);
+  font-weight: 700;
+}
+
+.day.selected {
+  background: rgba(0, 122, 255, 0.14);
+  border-color: rgba(0, 122, 255, 0.30);
+  color: @accent;
+  font-weight: 700;
+}
+
+.day.today.selected {
+  background: @accent;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.32);
+}
+
+/* ------------------------------------------------------------ auth prompt -- */
 
 .auth-message {
   min-height: 42px;
@@ -318,14 +646,14 @@ tooltip label {
 
 .auth-current-status,
 .auth-wizard-page {
-  background: rgba(255, 255, 255, 0.54);
-  border: 1px solid rgba(60, 60, 67, 0.10);
-  border-radius: 12px;
-  padding: 10px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid @hairline;
+  border-radius: 13px;
+  padding: 11px;
 }
 
 .auth-wizard-page {
-  background: rgba(233, 242, 255, 0.50);
+  background: rgba(233, 242, 255, 0.52);
   border-color: rgba(0, 122, 255, 0.18);
 }
 
@@ -339,25 +667,25 @@ tooltip label {
 
 .auth-progress-dot,
 .auth-instruction-index {
-  background: rgba(120, 120, 128, 0.12);
-  border: 1px solid rgba(60, 60, 67, 0.10);
+  background: @fill_quiet;
+  border: 1px solid @hairline;
   border-radius: 999px;
-  color: #6e6e73;
+  color: @ink_muted;
   font-weight: 800;
   min-height: 24px;
   min-width: 24px;
 }
 
 .auth-progress-dot.active {
-  background: #007aff;
-  border-color: #007aff;
+  background: @accent;
+  border-color: @accent;
   color: #ffffff;
 }
 
 .auth-progress-dot.completed {
-  background: rgba(52, 199, 89, 0.14);
-  border-color: rgba(52, 199, 89, 0.22);
-  color: #0a7f38;
+  background: @success_fill;
+  border-color: @success_line;
+  color: @success;
 }
 
 .auth-instruction-list {
@@ -385,197 +713,20 @@ tooltip label {
 }
 
 .auth-path-row {
-  background: rgba(255, 255, 255, 0.52);
-  border: 1px solid rgba(60, 60, 67, 0.10);
-  border-radius: 10px;
-  padding: 7px 9px;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid @hairline;
+  border-radius: 11px;
+  padding: 7px 10px;
 }
 
 .auth-expander {
-  color: #1d1d1f;
+  color: @ink;
   font-weight: 700;
 }
 
 .auth-form {
-  background: rgba(255, 255, 255, 0.52);
-  border: 1px solid rgba(60, 60, 67, 0.10);
-  border-radius: 12px;
-  padding: 10px;
-}
-
-.field-label {
-  color: #6e6e73;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.text-entry {
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(60, 60, 67, 0.14);
-  border-radius: 9px;
-  color: #1d1d1f;
-  min-height: 30px;
-  padding: 2px 9px;
-}
-
-.text-entry:focus {
-  border-color: rgba(0, 122, 255, 0.42);
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.12);
-  outline: none;
-}
-
-.event-date {
-  color: #007aff;
-  font-weight: 700;
-}
-
-.event-time {
-  color: #6e6e73;
-  font-weight: 600;
-}
-
-.pill {
-  color: #007aff;
-  background: rgba(0, 122, 255, 0.10);
-  border: 1px solid rgba(0, 122, 255, 0.18);
-  border-radius: 999px;
-  padding: 3px 9px;
-  font-weight: 600;
-}
-
-.status-badge {
-  border-radius: 999px;
-  padding: 3px 9px;
-  font-weight: 700;
-}
-
-.status-badge.success {
-  color: #0a7f38;
-  background: rgba(52, 199, 89, 0.14);
-  border: 1px solid rgba(52, 199, 89, 0.22);
-}
-
-.status-badge.warning {
-  color: #b35c00;
-  background: rgba(255, 149, 0, 0.14);
-  border: 1px solid rgba(255, 149, 0, 0.22);
-}
-
-.status-badge.info {
-  color: #007aff;
-  background: rgba(0, 122, 255, 0.12);
-  border: 1px solid rgba(0, 122, 255, 0.20);
-}
-
-.status-badge.neutral {
-  color: #6e6e73;
-  background: rgba(120, 120, 128, 0.12);
-  border: 1px solid rgba(60, 60, 67, 0.10);
-}
-
-.nav-button,
-.action-button,
-.close-button {
-  background: rgba(120, 120, 128, 0.12);
-  border: 1px solid rgba(60, 60, 67, 0.10);
-  border-radius: 999px;
-  color: #1d1d1f;
-  font-weight: 700;
-  padding: 3px 10px;
-}
-
-.icon-button {
-  min-height: 30px;
-  min-width: 30px;
-  padding: 0;
-}
-
-.calendar-actions {
-  margin-top: 2px;
-}
-
-.nav-button:focus,
-.action-button:focus,
-.close-button:focus,
-.calendar-title-button:focus,
-.calendar-picker-cell:focus,
-.date-cell:focus,
-.day:focus {
-  box-shadow: none;
-  outline: none;
-}
-
-.nav-button:hover,
-.action-button:hover {
-  background: rgba(0, 122, 255, 0.12);
-  color: #007aff;
-}
-
-.action-button.primary-action {
-  background: #007aff;
-  border-color: #007aff;
-  color: #ffffff;
-}
-
-.action-button.primary-action:hover {
-  background: #0a84ff;
-  border-color: #0a84ff;
-  color: #ffffff;
-}
-
-.action-button.selected {
-  background: rgba(0, 122, 255, 0.14);
-  border-color: rgba(0, 122, 255, 0.30);
-  color: #007aff;
-}
-
-.close-button {
-  color: #6e6e73;
-}
-
-.close-button:hover {
-  background: rgba(255, 59, 48, 0.14);
-  color: #ff3b30;
-}
-
-.day {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  box-shadow: none;
-  color: #1d1d1f;
-  font-weight: 600;
-  padding: 0;
-}
-
-.day:hover {
-  background: rgba(0, 122, 255, 0.10);
-  border-color: rgba(0, 122, 255, 0.16);
-}
-
-.day.weekend {
-  color: #6e6e73;
-}
-
-.day.outside {
-  color: rgba(142, 142, 147, 0.58);
-}
-
-.day.today {
-  color: #007aff;
-  background: transparent;
-  border-color: rgba(0, 122, 255, 0.35);
-  font-weight: 700;
-}
-
-.day.selected {
-  background: rgba(0, 122, 255, 0.14);
-  border-color: rgba(0, 122, 255, 0.30);
-  color: #007aff;
-  font-weight: 700;
-}
-
-.day.today.selected {
-  background: #007aff;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid @hairline;
+  border-radius: 13px;
+  padding: 11px;
 }

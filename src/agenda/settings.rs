@@ -43,11 +43,13 @@ pub(super) fn build(
     topbar.add_css_class("topbar");
     topbar.add_css_class("settings-topbar");
 
-    let title_box = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let title_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     title_box.add_css_class("settings-title-box");
-    let title_icon = gtk::Image::from_icon_name("emblem-system-symbolic");
-    title_icon.add_css_class("settings-title-icon");
-    title_box.append(&title_icon);
+    title_box.append(&icon_tile(
+        "emblem-system-symbolic",
+        "settings-title-icon",
+        "tint-general",
+    ));
     let title = label(translate(lang, "settings"), &["title"], 0.0, false);
     title_box.append(&title);
     topbar.append(&title_box);
@@ -77,7 +79,7 @@ pub(super) fn build(
         0.0,
         false,
     );
-    let calendar_section = section(&cal_tz_title, "x-office-calendar-symbolic");
+    let calendar_section = section(&cal_tz_title, "x-office-calendar-symbolic", "tint-calendar");
 
     let calendar_label = label(translate(lang, "calendar_id"), &["field-label"], 0.0, false);
     let calendar_entry = gtk::Entry::builder()
@@ -95,7 +97,11 @@ pub(super) fn build(
     content.append(&calendar_section);
 
     let appearance_title = label(translate(lang, "appearance"), &["event-title"], 0.0, false);
-    let appearance_section = section(&appearance_title, "preferences-desktop-theme-symbolic");
+    let appearance_section = section(
+        &appearance_title,
+        "preferences-desktop-theme-symbolic",
+        "tint-appearance",
+    );
 
     let theme_label = label(translate(lang, "theme_path"), &["field-label"], 0.0, false);
     let theme_entry = gtk::Entry::builder()
@@ -127,7 +133,7 @@ pub(super) fn build(
         0.0,
         false,
     );
-    let account_section = section(&account_title, "avatar-default-symbolic");
+    let account_section = section(&account_title, "avatar-default-symbolic", "tint-account");
 
     let account_row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     account_row.add_css_class("settings-form-row");
@@ -325,19 +331,32 @@ pub(super) fn update_state(
     }
 }
 
-fn section(title: &gtk::Label, icon_name: &str) -> gtk::Box {
-    let section = gtk::Box::new(gtk::Orientation::Vertical, 8);
+fn section(title: &gtk::Label, icon_name: &str, tint: &str) -> gtk::Box {
+    let section = gtk::Box::new(gtk::Orientation::Vertical, 10);
     section.add_css_class("settings-section");
 
-    let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    let header = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     header.add_css_class("settings-section-header");
-    let icon = gtk::Image::from_icon_name(icon_name);
-    icon.add_css_class("settings-section-icon");
-    header.append(&icon);
+    header.append(&icon_tile(icon_name, "settings-section-icon", tint));
     header.append(title);
     section.append(&header);
 
     section
+}
+
+/// A rounded, colour-filled tile holding a centered symbolic icon (iOS style).
+fn icon_tile(icon_name: &str, icon_class: &str, tint: &str) -> gtk::Box {
+    let tile = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+    tile.add_css_class("settings-icon-tile");
+    tile.add_css_class(tint);
+    tile.set_halign(gtk::Align::Center);
+    tile.set_valign(gtk::Align::Center);
+
+    let icon = gtk::Image::from_icon_name(icon_name);
+    icon.add_css_class(icon_class);
+    tile.append(&icon);
+
+    tile
 }
 
 fn field_row(label: &gtk::Label, input: &impl IsA<gtk::Widget>) -> gtk::Box {

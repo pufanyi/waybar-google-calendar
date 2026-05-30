@@ -2,44 +2,31 @@
   Example user theme override.
 
   The app first loads the built-in theme, then appends this file. You only need
-  to override the classes you want to change.
+  to override the parts you want to change.
+
+  The built-in theme is built on a small set of named colors (see the top of
+  assets/themes/apple-light.css). Re-defining one of them here re-tints the
+  whole UI at once — accents, focus rings, buttons, calendar highlights, etc.
 */
 
+/* One line to recolor the entire accent system (try #ff2d55, #34c759, ...). */
+@define-color accent #0a84ff;
+
+/* You can still override individual pieces for finer control. */
 .panel {
-  background: rgba(246, 248, 255, 0.92);
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.94), rgba(240, 244, 252, 0.92));
   border-color: rgba(60, 90, 160, 0.22);
 }
 
-.accent,
-.event-date,
-.weekday {
-  color: #0a84ff;
+/* Recolor the settings section icon tiles. */
+.settings-icon-tile.tint-calendar {
+  background: linear-gradient(165deg, #ff8a5b, #ff3b30);
 }
 
-.pill {
-  color: #0a84ff;
-  background: rgba(10, 132, 255, 0.12);
-  border-color: rgba(10, 132, 255, 0.22);
+.settings-icon-tile.tint-appearance {
+  background: linear-gradient(165deg, #5ac8fa, #0a84ff);
 }
 
-.date-cell.today,
-.day.today {
-  color: #0a84ff;
-  background: transparent;
-  border-color: rgba(10, 132, 255, 0.35);
-}
-
-.date-cell.selected {
-  color: #ffffff;
-  background: #0a84ff;
-  border-color: #0a84ff;
-}
-
-.date-cell.selected .event-dot {
-  background: #ffffff;
-}
-
-.action-button.selected {
-  color: #0a84ff;
-  border-color: rgba(10, 132, 255, 0.24);
+.settings-icon-tile.tint-account {
+  background: linear-gradient(165deg, #44d06a, #1aa64b);
 }
