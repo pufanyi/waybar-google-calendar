@@ -103,22 +103,21 @@ fn body(
     sender: ComponentSender<AgendaApp>,
 ) -> gtk::Box {
     let list = gtk::Box::new(gtk::Orientation::Vertical, 8);
-    if state.loading && state.events.is_empty() {
+    if focus_auth_prompt {
+        list.append(&auth_prompt::prompt_card(
+            state.error.as_deref().unwrap_or_default(),
+            authenticating,
+            auth_page,
+            sender,
+        ));
+    } else if state.loading && state.events.is_empty() {
         list.append(&cards::message(
             "Loading Google Calendar",
             Some("The window is ready while agenda data updates."),
             true,
         ));
     } else if let Some(error) = &state.error {
-        append_error_state(
-            &list,
-            error,
-            authenticating,
-            auth_page,
-            focus_auth_prompt,
-            visible_events,
-            sender,
-        );
+        append_error_state(&list, error, visible_events);
     } else if state.loading {
         list.append(&cards::message(
             "Refreshing",
@@ -137,23 +136,8 @@ fn body(
     list
 }
 
-fn append_error_state(
-    list: &gtk::Box,
-    error: &str,
-    authenticating: bool,
-    auth_page: usize,
-    focus_auth_prompt: bool,
-    visible_events: Vec<&Event>,
-    sender: ComponentSender<AgendaApp>,
-) {
-    if focus_auth_prompt {
-        list.append(&auth_prompt::prompt_card(
-            error,
-            authenticating,
-            auth_page,
-            sender,
-        ));
-    } else if visible_events.is_empty() {
+fn append_error_state(list: &gtk::Box, error: &str, visible_events: Vec<&Event>) {
+    if visible_events.is_empty() {
         list.append(&cards::message("Refresh failed", Some(error), false));
     } else {
         list.append(&cards::message("Refresh failed", Some(error), false));

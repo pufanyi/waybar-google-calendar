@@ -13,7 +13,7 @@ pub(super) fn build(
     sender: ComponentSender<AgendaApp>,
 ) -> gtk::Box {
     match page {
-        0 => intro(),
+        0 => intro(sender),
         1 => open_cloud(sender),
         2 => enable_api(sender),
         3 => consent_screen(sender),
@@ -22,17 +22,17 @@ pub(super) fn build(
     }
 }
 
-fn intro() -> gtk::Box {
+fn intro(sender: ComponentSender<AgendaApp>) -> gtk::Box {
     let (page, body) = shell(
-        "Before you start",
-        "You will create a private Google OAuth client, then let this app read your calendar.",
+        "Use the setup guide",
+        "The detailed Google Cloud steps live in docs/google-oauth.md.",
     );
     body.append(&instruction_list(&[
-        "Keep this calendar window open while the browser opens Google Cloud.",
-        "Use the Google account whose calendar you want to show in Waybar.",
-        "This app asks for read-only Calendar access and saves the credentials on this computer.",
-        "If a Google page looks different, choose the closest option with the same name.",
+        "Open the setup guide and follow it in your browser.",
+        "Create a Desktop app OAuth client in Google Cloud.",
+        "Copy the Client ID and Client Secret back into this app.",
     ]));
+    append_guide_action(&body, sender);
     page
 }
 
@@ -42,12 +42,11 @@ fn open_cloud(sender: ComponentSender<AgendaApp>) -> gtk::Box {
         "First open the Google Auth Platform page and choose a project for this local setup.",
     );
     body.append(&instruction_list(&[
-        "Click Google Cloud below. Your browser should open a Google Cloud page.",
-        "Sign in if Google asks.",
-        "If Google asks for a project, create one named Waybar Calendar or choose an existing personal project.",
-        "If you see a Get started button for Google Auth Platform, click it.",
+        "Open Google Cloud from here or from the setup guide.",
+        "Choose or create the project described in docs/google-oauth.md.",
+        "Return here after the project is ready.",
     ]));
-    append_cloud_action(&body, sender);
+    append_guide_and_cloud_actions(&body, sender);
     page
 }
 
@@ -57,12 +56,12 @@ fn enable_api(sender: ComponentSender<AgendaApp>) -> gtk::Box {
         "Google will not allow calendar access until the Calendar API is enabled for the project.",
     );
     body.append(&instruction_list(&[
-        "Click Open Calendar API below.",
-        "Check the project selector near the top of the page. It should be the project you chose for this app.",
-        "Click Enable. If the button says Manage, the API is already enabled.",
-        "When it finishes, return here and click Next.",
+        "Open the Calendar API page.",
+        "Check that Google Cloud is using the project from the setup guide.",
+        "Click Enable, or continue if the page already says Manage.",
     ]));
     let actions = widgets::action_row();
+    append_setup_guide_button(&actions, sender.clone());
     let open_api = classed_button("Open Calendar API", &["action-button"]);
     {
         let sender = sender.clone();
@@ -79,13 +78,11 @@ fn consent_screen(sender: ComponentSender<AgendaApp>) -> gtk::Box {
         "Google uses these details on the permission screen that appears when you sign in.",
     );
     body.append(&instruction_list(&[
-        "If Google asks for app information, use Waybar Google Calendar as the app name.",
-        "For User support email and Developer contact email, choose your own Google email.",
-        "Choose External for a personal Gmail account. Choose Internal only for a Google Workspace organization.",
-        "If there is a Test users page, add the same Google email you will use for Calendar.",
-        "Save or continue until Google lets you create OAuth clients.",
+        "Use the app details from docs/google-oauth.md.",
+        "For personal Gmail, choose External if Google asks for an audience.",
+        "Add your own Google account as a test user if Google asks.",
     ]));
-    append_cloud_action(&body, sender);
+    append_guide_and_cloud_actions(&body, sender);
     page
 }
 
@@ -95,20 +92,18 @@ fn create_client(sender: ComponentSender<AgendaApp>) -> gtk::Box {
         "This creates the Client ID and Client Secret that this app needs.",
     );
     body.append(&instruction_list(&[
-        "Open the Google Auth Platform Clients page.",
-        "Click Create client.",
-        "For Application type, choose Desktop app.",
-        "For Name, enter Waybar Google Calendar, then click Create.",
-        "Copy both the Client ID and Client Secret before closing the result window.",
+        "Open the Clients page from here or from the setup guide.",
+        "Create an OAuth client with Application type Desktop app.",
+        "Copy both the Client ID and Client Secret.",
     ]));
     let note = label(
-        "Google may only show the full client secret when it is created. Copy it immediately.",
+        "If Google hides the secret later, create a new Desktop app client.",
         &["muted", "auth-note"],
         0.0,
         true,
     );
     body.append(&note);
-    append_cloud_action(&body, sender);
+    append_guide_and_cloud_actions(&body, sender);
     page
 }
 
@@ -138,10 +133,12 @@ fn finish(
         body.append(&replace);
     } else {
         body.append(&instruction_list(&[
+            "Follow docs/google-oauth.md to create a Desktop app OAuth client.",
             "Paste the Client ID exactly as Google shows it.",
             "Paste the Client Secret exactly as Google shows it.",
             "Click Save & Authenticate. Your browser will open the Google permission screen.",
         ]));
+        append_guide_action(&body, sender.clone());
         body.append(&form::credentials(
             authenticating,
             "Save & Authenticate",
@@ -200,8 +197,15 @@ fn instruction_list(items: &[&str]) -> gtk::Box {
     list
 }
 
-fn append_cloud_action(body: &gtk::Box, sender: ComponentSender<AgendaApp>) {
+fn append_guide_action(body: &gtk::Box, sender: ComponentSender<AgendaApp>) {
     let actions = widgets::action_row();
+    append_setup_guide_button(&actions, sender);
+    body.append(&actions);
+}
+
+fn append_guide_and_cloud_actions(body: &gtk::Box, sender: ComponentSender<AgendaApp>) {
+    let actions = widgets::action_row();
+    append_setup_guide_button(&actions, sender.clone());
     let open_cloud = classed_button("Google Cloud", &["action-button"]);
     {
         let sender = sender.clone();
@@ -209,6 +213,15 @@ fn append_cloud_action(body: &gtk::Box, sender: ComponentSender<AgendaApp>) {
     }
     actions.append(&open_cloud);
     body.append(&actions);
+}
+
+fn append_setup_guide_button(actions: &gtk::Box, sender: ComponentSender<AgendaApp>) {
+    let setup_guide = classed_button("Setup Guide", &["action-button"]);
+    {
+        let sender = sender.clone();
+        setup_guide.connect_clicked(move |_| sender.input(AgendaMsg::OpenSetupGuide));
+    }
+    actions.append(&setup_guide);
 }
 
 fn append_start_auth_action(

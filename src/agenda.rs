@@ -42,6 +42,7 @@ pub enum AgendaMsg {
     },
     OpenConfigDir,
     OpenTokenDir,
+    OpenSetupGuide,
     OpenGoogleCloud,
     OpenCalendarApi,
     PreviousAuthPage,

@@ -66,6 +66,6 @@ fn needs_auth_action(error: &str) -> bool {
         || error.contains("401")
 }
 
-fn setup_incomplete() -> bool {
+pub(super) fn setup_incomplete() -> bool {
     !paths::client_secret_file().exists() || !paths::oauth_token_file().exists()
 }

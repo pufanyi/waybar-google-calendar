@@ -7,6 +7,8 @@ Guidance for agents working in this repository.
 - `README.md` is for humans: users, packagers, and contributors. Keep it focused
   on features, installation/build steps, authentication, Waybar setup, theming,
   environment variables, packaging, and a concise source layout.
+- `docs/` is for longer human-facing guides that are too detailed for the
+  README, such as provider setup walkthroughs.
 - `AGENTS.md` is for agents and maintainers working in the repository. Keep it
   focused on workflow rules, code organization guidance, verification commands,
   and documentation maintenance expectations.
@@ -40,6 +42,8 @@ Guidance for agents working in this repository.
   - `view/`: calendar pane, agenda list, event/message cards, and status text.
 - Google Calendar access is implemented with `yup-oauth2` and `reqwest`.
 - The built-in GTK CSS theme is `assets/themes/apple-light.css`.
+- The embedded Google OAuth setup guide is sourced from `docs/google-oauth.md`;
+  keep program setup text consistent with that file.
 
 ## Common Commands
 
@@ -80,6 +84,10 @@ Update `README.md` when a change affects:
 - Environment variables, cache behavior, timeouts, or config paths.
 - Theme behavior, important CSS classes, or custom theme instructions.
 - High-level source layout that a human contributor would reasonably need.
+
+Update files in `docs/` when a user-facing workflow needs more detail than
+belongs in the README. If the app embeds or opens a doc, keep the app text and
+the doc in sync.
 
 Do not update `AGENTS.md` for incidental implementation details that are already clear from nearby code.
 Do not update `README.md` for private refactors that do not change user-facing behavior or contributor-facing layout.

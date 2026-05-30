@@ -18,6 +18,7 @@ pub(super) const GOOGLE_CLOUD_CREDENTIALS_URL: &str =
 pub(super) const GOOGLE_CALENDAR_API_URL: &str =
     "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com";
 
+const SETUP_GUIDE: &str = include_str!("../../docs/google-oauth.md");
 const PAGE_COUNT: usize = 6;
 pub(super) const LAST_PAGE: usize = PAGE_COUNT - 1;
 
@@ -70,11 +71,27 @@ pub(super) fn open_dir(path: &Path) -> Result<(), String> {
     google::open_external_uri(uri.as_str())
 }
 
+pub(super) fn open_setup_guide() -> Result<(), String> {
+    let docs_dir = paths::data_dir().join("docs");
+    fs::create_dir_all(&docs_dir)
+        .map_err(|err| format!("Could not create folder {}: {err}", docs_dir.display()))?;
+    let guide = docs_dir.join("google-oauth.md");
+    fs::write(&guide, SETUP_GUIDE)
+        .map_err(|err| format!("Could not write setup guide {}: {err}", guide.display()))?;
+    let file = gio::File::for_path(&guide);
+    let uri = file.uri();
+    google::open_external_uri(uri.as_str())
+}
+
 pub(super) fn should_focus(state: &AgendaState, authenticating: bool) -> bool {
+    if authenticating || status::setup_incomplete() {
+        return true;
+    }
+
     state
         .error
         .as_deref()
-        .map(|error| authenticating || status::should_show_prompt(error))
+        .map(status::should_show_prompt)
         .unwrap_or(false)
 }
 

@@ -108,6 +108,13 @@ impl AgendaApp {
                         .unwrap_or_else(|error| error),
                 );
             }
+            AgendaMsg::OpenSetupGuide => {
+                self.state.error = Some(
+                    auth_prompt::open_setup_guide()
+                        .map(|_| "Setup guide opened.".to_string())
+                        .unwrap_or_else(|error| error),
+                );
+            }
             AgendaMsg::OpenGoogleCloud => {
                 self.open_external(
                     auth_prompt::GOOGLE_CLOUD_CREDENTIALS_URL,

@@ -63,9 +63,15 @@ The source tree is grouped by responsibility:
 ## Authentication
 
 Create an OAuth desktop client in Google Cloud with the Calendar API enabled.
-On first launch, the agenda popup can save the OAuth client config for you:
-paste the Client ID and Client Secret into the embedded setup panel, then press
-`Save & Authenticate`.
+Follow the full setup guide in [`docs/google-oauth.md`](docs/google-oauth.md)
+to get the Client ID and Client Secret.
+
+On first launch, the agenda popup can open the same setup guide from the
+embedded setup panel. Paste the Client ID and Client Secret into the app, then
+press `Save & Authenticate`.
+
+When OAuth setup is incomplete, the agenda popup focuses the setup panel instead
+of showing stale cached events.
 
 If you prefer using the downloaded JSON, place it at:
 
