@@ -171,13 +171,17 @@ impl Component for AgendaApp {
             .resizable(false)
             .build();
         settings_window.set_decorated(false);
+        settings_window.connect_close_request(|window| {
+            window.set_visible(false);
+            gtk::glib::Propagation::Stop
+        });
 
         let key_controller = gtk::EventControllerKey::new();
         {
             let win = settings_window.clone();
             key_controller.connect_key_pressed(move |_, key, _, _| {
                 if key == gdk::Key::Escape {
-                    win.close();
+                    win.set_visible(false);
                     gtk::glib::Propagation::Stop
                 } else {
                     gtk::glib::Propagation::Proceed
@@ -206,7 +210,7 @@ impl Component for AgendaApp {
         );
         {
             let win = settings_window.clone();
-            settings_close.connect_clicked(move |_| win.close());
+            settings_close.connect_clicked(move |_| win.set_visible(false));
         }
         settings_topbar.append(&settings_close);
         settings_box.append(&settings_topbar);
@@ -339,7 +343,7 @@ impl Component for AgendaApp {
         let settings_cancel_button = classed_button(translate(lang, "cancel"), &["action-button"]);
         {
             let win = settings_window.clone();
-            settings_cancel_button.connect_clicked(move |_| win.close());
+            settings_cancel_button.connect_clicked(move |_| win.set_visible(false));
         }
         settings_buttons.append(&settings_cancel_button);
 
@@ -369,7 +373,7 @@ impl Component for AgendaApp {
                     theme_path: if th.is_empty() { None } else { Some(th) },
                     language: saved_lang,
                 });
-                win.close();
+                win.set_visible(false);
             });
         }
         settings_buttons.append(&settings_save_button);

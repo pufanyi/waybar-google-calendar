@@ -93,6 +93,11 @@ Run `cargo fmt` before finalizing changes when formatting is needed.
   `src/auth_ui/`, and shared helpers in `src/ui/`.
 - For UI changes, update `assets/themes/apple-light.css` only when new or changed CSS classes need theme support.
 - Keep user-facing OAuth/setup text accurate and concrete; the README documents the current authentication flow.
+- Prefer in-window state changes, panels, and view transitions over adding new
+  popup windows or modal dialogs. Use a separate window only when it clearly
+  improves the workflow or matches an existing app mode.
+- When a GTK window or dialog is meant to be reused, hide it with
+  `set_visible(false)` and present it again instead of closing/destroying it.
 
 ## Documentation Maintenance
 
