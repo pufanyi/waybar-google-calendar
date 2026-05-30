@@ -152,7 +152,9 @@ Important CSS classes:
 - `.panel`, `.topbar`, `.left-pane`
 - `.agenda-card`, `.empty-card`
 - `.settings-card`, `.settings-row`, `.status-badge`, `.path-label`, `.auth-prompt`
-- `.auth-form`, `.field-label`, `.text-entry`
+- `.auth-current-status`, `.auth-wizard-page`, `.auth-wizard-progress`, `.auth-wizard-navigation`
+- `.auth-progress-dot`, `.auth-instruction-row`, `.auth-step-actions`, `.auth-helper-actions`
+- `.auth-form`, `.auth-path-row`, `.field-label`, `.text-entry`
 - `.title`, `.agenda-header`, `.month-title`, `.event-title`
 - `.muted`, `.subtle`, `.accent`
 - `.weekday`, `.date-cell`, `.day`
