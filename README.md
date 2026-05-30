@@ -40,6 +40,26 @@ sudo pacman -S gtk4 libadwaita rust
 cargo build --release
 ```
 
+## Development
+
+Common checks:
+
+```bash
+cargo fmt --check
+cargo test
+```
+
+The source tree is grouped by responsibility:
+
+- `src/app/`: CLI parsing and single-instance process handling.
+- `src/agenda/`: Google Calendar agenda popup internals.
+- `src/auth_ui/`: standalone graphical authentication helper.
+- `src/calendar/`: shared calendar/date model and date helpers.
+- `src/google/`: Google OAuth and Calendar API access.
+- `src/month/`: standalone local month calendar popup.
+- `src/storage/`: cache and filesystem paths.
+- `src/ui/`: shared GTK helpers and theme loading.
+
 ## Authentication
 
 Create an OAuth desktop client in Google Cloud with the Calendar API enabled.
@@ -106,7 +126,7 @@ Agenda can also filter to a calendar name or ID:
 }
 ```
 
-## Calendar Libraries
+## Implementation Notes
 
 The project currently avoids a dedicated calendar UI library. The maintained
 pieces are split by responsibility:
