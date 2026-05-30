@@ -594,7 +594,7 @@ fn build_agenda_list(
         if state.events.is_empty() {
             list.append(&auth_prompt_card(error, authenticating, sender));
         } else {
-            if needs_auth_action(error) {
+            if should_show_auth_prompt(error) {
                 list.append(&auth_prompt_card(error, authenticating, sender));
             } else {
                 list.append(&message_card("Refresh failed", Some(error), false));
@@ -809,6 +809,14 @@ fn needs_auth_action(error: &str) -> bool {
         || error.contains("access token")
         || error.contains("invalid_grant")
         || error.contains("401")
+}
+
+fn should_show_auth_prompt(error: &str) -> bool {
+    needs_auth_action(error) || auth_setup_incomplete()
+}
+
+fn auth_setup_incomplete() -> bool {
+    !paths::client_secret_file().exists() || !paths::oauth_token_file().exists()
 }
 
 fn range_label(range: DateRange) -> String {
