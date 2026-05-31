@@ -357,6 +357,7 @@ fn configure_picker_grid(grid: &gtk::Grid) {
 
 fn calendar_title_button(text: &str, language: Language) -> (gtk::Button, gtk::Label, gtk::Image) {
     let button = gtk::Button::new();
+    button.set_cursor_from_name(Some("pointer"));
     button.add_css_class("calendar-title-button");
     button.set_tooltip_text(Some(translate(language, "change_calendar_view")));
 

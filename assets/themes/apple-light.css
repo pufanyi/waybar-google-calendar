@@ -530,12 +530,16 @@ combobox.text-entry arrow {
 .nav-button,
 .action-button,
 .close-button {
-  background: @fill_quiet;
-  border: 1px solid @hairline_soft;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(60, 60, 67, 0.16);
   border-radius: 999px;
   color: @ink;
   font-weight: 700;
-  padding: 4px 12px;
+  min-height: 34px;
+  padding: 5px 14px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.64),
+    0 2px 6px rgba(29, 29, 31, 0.06);
   transition: all 150ms ease;
 }
 
@@ -562,16 +566,49 @@ combobox.text-entry arrow {
 
 .nav-button:hover,
 .action-button:hover {
-  background: @accent_soft;
-  border-color: @accent_ring;
+  background: rgba(229, 242, 255, 0.96);
+  border-color: rgba(0, 122, 255, 0.30);
   color: @accent;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.70),
+    0 5px 14px rgba(0, 122, 255, 0.13);
 }
 
 .nav-button:active,
 .action-button:active {
   background: rgba(0, 122, 255, 0.18);
-  border-color: rgba(0, 122, 255, 0.30);
+  border-color: rgba(0, 122, 255, 0.38);
   color: @accent_press;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 64, 128, 0.14),
+    0 1px 3px rgba(0, 122, 255, 0.10);
+}
+
+.nav-button:disabled,
+.action-button:disabled,
+.close-button:disabled,
+.calendar-title-button:disabled,
+.calendar-picker-cell:disabled,
+.date-cell:disabled,
+.day:disabled {
+  background: rgba(118, 118, 128, 0.055);
+  border-color: rgba(60, 60, 67, 0.07);
+  box-shadow: none;
+  color: @ink_subtle;
+  opacity: 0.48;
+}
+
+.nav-button:disabled:hover,
+.action-button:disabled:hover,
+.close-button:disabled:hover,
+.calendar-title-button:disabled:hover,
+.calendar-picker-cell:disabled:hover,
+.date-cell:disabled:hover,
+.day:disabled:hover {
+  background: rgba(118, 118, 128, 0.055);
+  border-color: rgba(60, 60, 67, 0.07);
+  color: @ink_subtle;
+  box-shadow: none;
 }
 
 .action-button.primary-action {
@@ -598,6 +635,13 @@ combobox.text-entry arrow {
   box-shadow: 0 2px 6px rgba(0, 122, 255, 0.34);
 }
 
+.action-button.primary-action:disabled {
+  background: rgba(118, 118, 128, 0.08);
+  border-color: rgba(60, 60, 67, 0.08);
+  color: @ink_subtle;
+  box-shadow: none;
+}
+
 .action-button.selected {
   background: rgba(0, 122, 255, 0.14);
   border-color: rgba(0, 122, 255, 0.30);
@@ -612,6 +656,15 @@ combobox.text-entry arrow {
   background: @danger_fill;
   border-color: rgba(255, 59, 48, 0.22);
   color: @danger;
+}
+
+.close-button:disabled,
+.close-button:disabled:hover {
+  background: rgba(118, 118, 128, 0.055);
+  border-color: rgba(60, 60, 67, 0.07);
+  box-shadow: none;
+  color: @ink_subtle;
+  opacity: 0.48;
 }
 
 /* -------------------------------------------------------- month-view days -- */
@@ -658,6 +711,15 @@ combobox.text-entry arrow {
   background: @accent;
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(0, 122, 255, 0.32);
+}
+
+.day:disabled,
+.day:disabled:hover {
+  background: rgba(118, 118, 128, 0.055);
+  border-color: rgba(60, 60, 67, 0.07);
+  box-shadow: none;
+  color: @ink_subtle;
+  opacity: 0.48;
 }
 
 /* ------------------------------------------------------------ auth prompt -- */

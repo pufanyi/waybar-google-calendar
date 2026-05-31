@@ -77,6 +77,7 @@ fn header(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gtk::Box {
 fn title_button(model: &AgendaApp) -> gtk::Button {
     let lang = model.language();
     let button = gtk::Button::new();
+    button.set_cursor_from_name(Some("pointer"));
     button.add_css_class("calendar-title-button");
     button.set_tooltip_text(Some(calendar_title_tooltip(model.calendar_view, lang)));
 
@@ -254,6 +255,7 @@ fn actions(model: &AgendaApp, today: NaiveDate, sender: ComponentSender<AgendaAp
 
 fn calendar_day_button(day: u32, has_event: bool) -> gtk::Button {
     let button = gtk::Button::new();
+    button.set_cursor_from_name(Some("pointer"));
     button.add_css_class("date-cell");
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 0);

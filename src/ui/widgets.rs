@@ -19,6 +19,7 @@ pub fn label(text: &str, classes: &[&str], xalign: f32, wrap: bool) -> gtk::Labe
 
 pub fn classed_button(text: &str, classes: &[&str]) -> gtk::Button {
     let widget = gtk::Button::with_label(text);
+    widget.set_cursor_from_name(Some("pointer"));
     for class in classes {
         widget.add_css_class(class);
     }
@@ -27,6 +28,7 @@ pub fn classed_button(text: &str, classes: &[&str]) -> gtk::Button {
 
 pub fn icon_button(icon_name: &str, classes: &[&str], tooltip: &str) -> gtk::Button {
     let widget = gtk::Button::new();
+    widget.set_cursor_from_name(Some("pointer"));
     let icon = gtk::Image::from_icon_name(icon_name);
     widget.set_child(Some(&icon));
     widget.set_tooltip_text(Some(tooltip));
