@@ -3,15 +3,23 @@ use crate::storage::paths;
 use crate::storage::settings::{Language, UserSettings, translate};
 use crate::ui::{classed_button, label};
 use adw::prelude::*;
-use gtk::cairo::{Context, LineCap, LineJoin};
 use relm4::ComponentSender;
-use std::f64::consts::PI;
 
 #[derive(Clone, Copy)]
 enum SettingsIcon {
     Calendar,
     Sparkle,
     Account,
+}
+
+impl SettingsIcon {
+    fn icon_name(self) -> &'static str {
+        match self {
+            SettingsIcon::Calendar => "x-office-calendar-symbolic",
+            SettingsIcon::Sparkle => "preferences-desktop-theme-symbolic",
+            SettingsIcon::Account => "avatar-default-symbolic",
+        }
+    }
 }
 
 pub(super) struct SettingsWidgets {
@@ -316,7 +324,7 @@ fn section(title: &gtk::Label, icon: SettingsIcon, tint: &str) -> gtk::Box {
     section
 }
 
-/// A rounded, colour-filled tile holding a centered line icon.
+/// A rounded, colour-filled tile holding a centered symbolic icon.
 fn icon_tile(icon: SettingsIcon, tint: &str) -> gtk::Box {
     let tile = gtk::Box::new(gtk::Orientation::Horizontal, 0);
     tile.add_css_class("settings-icon-tile");
@@ -325,136 +333,18 @@ fn icon_tile(icon: SettingsIcon, tint: &str) -> gtk::Box {
     tile.set_valign(gtk::Align::Center);
     tile.set_size_request(30, 30);
 
-    let glyph = gtk::DrawingArea::new();
+    let glyph = gtk::Image::from_icon_name(icon.icon_name());
     glyph.add_css_class("settings-icon-glyph");
-    glyph.set_content_width(18);
-    glyph.set_content_height(18);
+    glyph.set_pixel_size(18);
+    glyph.set_halign(gtk::Align::Center);
+    glyph.set_valign(gtk::Align::Center);
     glyph.set_margin_top(6);
     glyph.set_margin_bottom(6);
     glyph.set_margin_start(6);
     glyph.set_margin_end(6);
-    glyph.set_draw_func(move |_, cr, width, height| {
-        draw_settings_icon(cr, icon, f64::from(width), f64::from(height));
-    });
     tile.append(&glyph);
 
     tile
-}
-
-fn draw_settings_icon(cr: &Context, icon: SettingsIcon, width: f64, height: f64) {
-    let side = width.min(height);
-    let _ = cr.save();
-    cr.translate((width - side) / 2.0, (height - side) / 2.0);
-    cr.scale(side / 18.0, side / 18.0);
-    cr.set_source_rgba(1.0, 1.0, 1.0, 0.96);
-    cr.set_line_cap(LineCap::Round);
-    cr.set_line_join(LineJoin::Round);
-
-    match icon {
-        SettingsIcon::Calendar => draw_calendar_icon(cr),
-        SettingsIcon::Sparkle => draw_sparkle_icon(cr),
-        SettingsIcon::Account => draw_account_icon(cr),
-    }
-
-    let _ = cr.restore();
-}
-
-fn draw_calendar_icon(cr: &Context) {
-    cr.set_line_width(1.55);
-    rounded_rect(cr, 3.25, 4.25, 11.5, 10.75, 2.0);
-    let _ = cr.stroke();
-
-    cr.move_to(3.9, 7.65);
-    cr.line_to(14.1, 7.65);
-    let _ = cr.stroke();
-
-    cr.set_line_width(1.75);
-    cr.move_to(6.25, 3.05);
-    cr.line_to(6.25, 5.45);
-    cr.move_to(11.75, 3.05);
-    cr.line_to(11.75, 5.45);
-    let _ = cr.stroke();
-
-    fill_dot(cr, 7.1, 10.45, 0.7);
-    fill_dot(cr, 10.9, 10.45, 0.7);
-    fill_dot(cr, 7.1, 13.0, 0.7);
-    fill_dot(cr, 10.9, 13.0, 0.7);
-}
-
-fn draw_sparkle_icon(cr: &Context) {
-    cr.set_line_width(1.55);
-    draw_sparkle(cr, 9.2, 8.6, 5.0);
-    draw_sparkle(cr, 4.4, 5.0, 2.15);
-    draw_sparkle(cr, 14.1, 13.1, 2.35);
-}
-
-fn draw_sparkle(cr: &Context, x: f64, y: f64, radius: f64) {
-    cr.move_to(x, y - radius);
-    cr.curve_to(
-        x + radius * 0.18,
-        y - radius * 0.18,
-        x + radius * 0.18,
-        y - radius * 0.18,
-        x + radius,
-        y,
-    );
-    cr.curve_to(
-        x + radius * 0.18,
-        y + radius * 0.18,
-        x + radius * 0.18,
-        y + radius * 0.18,
-        x,
-        y + radius,
-    );
-    cr.curve_to(
-        x - radius * 0.18,
-        y + radius * 0.18,
-        x - radius * 0.18,
-        y + radius * 0.18,
-        x - radius,
-        y,
-    );
-    cr.curve_to(
-        x - radius * 0.18,
-        y - radius * 0.18,
-        x - radius * 0.18,
-        y - radius * 0.18,
-        x,
-        y - radius,
-    );
-    let _ = cr.stroke();
-}
-
-fn draw_account_icon(cr: &Context) {
-    cr.set_line_width(1.6);
-    cr.arc(9.0, 6.7, 2.55, 0.0, PI * 2.0);
-    let _ = cr.stroke();
-
-    cr.move_to(4.1, 15.0);
-    cr.curve_to(4.75, 11.85, 6.6, 10.25, 9.0, 10.25);
-    cr.curve_to(11.4, 10.25, 13.25, 11.85, 13.9, 15.0);
-    let _ = cr.stroke();
-}
-
-fn rounded_rect(cr: &Context, x: f64, y: f64, width: f64, height: f64, radius: f64) {
-    cr.new_sub_path();
-    cr.arc(x + width - radius, y + radius, radius, -PI / 2.0, 0.0);
-    cr.arc(
-        x + width - radius,
-        y + height - radius,
-        radius,
-        0.0,
-        PI / 2.0,
-    );
-    cr.arc(x + radius, y + height - radius, radius, PI / 2.0, PI);
-    cr.arc(x + radius, y + radius, radius, PI, PI * 1.5);
-    cr.close_path();
-}
-
-fn fill_dot(cr: &Context, x: f64, y: f64, radius: f64) {
-    cr.new_sub_path();
-    cr.arc(x, y, radius, 0.0, PI * 2.0);
-    let _ = cr.fill();
 }
 
 fn field_row(label: &gtk::Label, input: &impl IsA<gtk::Widget>) -> gtk::Box {
