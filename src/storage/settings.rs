@@ -12,6 +12,10 @@ pub enum Language {
     Chinese,
 }
 
+impl Language {
+    pub const SETTINGS_ORDER: [Self; 2] = [Self::English, Self::Chinese];
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum WeekStart {
@@ -168,6 +172,17 @@ mod tests {
         assert!(settings.theme_path.is_none());
         assert_eq!(settings.language, None);
         assert_eq!(settings.week_start, None);
+    }
+
+    #[test]
+    fn language_defaults_to_english() {
+        assert_eq!(Language::default(), Language::English);
+    }
+
+    #[test]
+    fn language_settings_order_starts_with_english() {
+        assert_eq!(Language::SETTINGS_ORDER[0], Language::English);
+        assert_eq!(Language::SETTINGS_ORDER.len(), 2);
     }
 
     #[test]

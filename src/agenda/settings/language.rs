@@ -11,8 +11,12 @@ pub(super) fn selected(combo: &gtk::ComboBoxText) -> Language {
 
 pub(super) fn set_options(combo: &gtk::ComboBoxText, lang: Language, selected: Language) {
     combo.remove_all();
-    combo.append(Some("english"), translate(lang, "english"));
-    combo.append(Some("chinese"), translate(lang, "chinese"));
+    for language in Language::SETTINGS_ORDER {
+        combo.append(
+            Some(language_id(language)),
+            translate(lang, language_id(language)),
+        );
+    }
     combo.set_active_id(Some(language_id(selected)));
 }
 
