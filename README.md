@@ -57,7 +57,7 @@ The source tree is grouped by responsibility:
 - `src/calendar/`: shared calendar/date model, date helpers, and navigation
   view state.
 - `src/google/`: Google OAuth and Calendar API access.
-- `src/i18n.rs`: localized UI text lookup.
+- `src/i18n/`: localized UI text and calendar labels.
 - `src/month/`: standalone local month calendar popup.
 - `src/storage/`: cache and filesystem paths.
 - `src/ui/`: shared GTK helpers and theme loading.
@@ -114,6 +114,9 @@ The agenda popup features an in-window settings panel accessible by clicking the
 - **Google Account Status**: Check if the client secret and token files are present. You can:
   - **Log In**: Initiate Google OAuth login in your browser.
   - **Log Out**: Instantly delete the cached OAuth tokens and wipe local cached calendar data for security and privacy.
+
+Use **Apply** to apply and save changes while keeping the settings panel open.
+Use **Save** to apply and save changes, then return to the agenda view.
 
 All GUI settings are saved persistently to a local JSON file:
 ```text

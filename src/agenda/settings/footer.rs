@@ -3,7 +3,7 @@ use super::{
     calendar::{CalendarWidgets, selected_week_start_from_combo},
     language,
 };
-use crate::agenda::{AgendaApp, AgendaMsg};
+use crate::agenda::{AgendaApp, AgendaMsg, SettingsChanges};
 use crate::i18n::translate;
 use crate::storage::settings::Language;
 use crate::ui::{classed_button, label};
@@ -14,6 +14,7 @@ pub(super) struct FooterWidgets {
     pub(super) container: gtk::Box,
     message_label: gtk::Label,
     cancel_button: gtk::Button,
+    apply_button: gtk::Button,
     save_button: gtk::Button,
 }
 
@@ -40,6 +41,26 @@ pub(super) fn build(
     }
     container.append(&cancel_button);
 
+    let apply_button = classed_button(translate(lang, "apply"), &["action-button"]);
+    {
+        let sender = sender.clone();
+        let calendar_entry = calendar.calendar_entry.clone();
+        let timezone_entry = calendar.timezone_entry.clone();
+        let theme_entry = appearance.theme_entry.clone();
+        let language_combo = appearance.language_combo.clone();
+        let week_start_combo = calendar.week_start_combo.clone();
+        apply_button.connect_clicked(move |_| {
+            sender.input(AgendaMsg::ApplySettings(SettingsChanges {
+                calendar: calendar_entry.text().to_string(),
+                timezone: timezone_entry.text().to_string(),
+                theme_path: theme_entry.text().to_string(),
+                language: language::selected(&language_combo),
+                week_start: selected_week_start_from_combo(&week_start_combo),
+            }));
+        });
+    }
+    container.append(&apply_button);
+
     let save_button = classed_button(translate(lang, "save"), &["action-button"]);
     save_button.add_css_class("primary-action");
     {
@@ -50,13 +71,13 @@ pub(super) fn build(
         let language_combo = appearance.language_combo.clone();
         let week_start_combo = calendar.week_start_combo.clone();
         save_button.connect_clicked(move |_| {
-            sender.input(AgendaMsg::SaveSettings {
+            sender.input(AgendaMsg::SaveSettings(SettingsChanges {
                 calendar: calendar_entry.text().to_string(),
                 timezone: timezone_entry.text().to_string(),
                 theme_path: theme_entry.text().to_string(),
                 language: language::selected(&language_combo),
                 week_start: selected_week_start_from_combo(&week_start_combo),
-            });
+            }));
         });
     }
     container.append(&save_button);
@@ -65,12 +86,14 @@ pub(super) fn build(
         container,
         message_label,
         cancel_button,
+        apply_button,
         save_button,
     }
 }
 
 pub(super) fn update_text(widgets: &FooterWidgets, lang: Language) {
     widgets.cancel_button.set_label(translate(lang, "cancel"));
+    widgets.apply_button.set_label(translate(lang, "apply"));
     widgets.save_button.set_label(translate(lang, "save"));
 }
 

@@ -1,4 +1,4 @@
-use super::{AgendaApp, AgendaCommandOutput, AgendaMsg, auth_prompt};
+use super::{AgendaApp, AgendaCommandOutput, AgendaMsg, SettingsChanges, auth_prompt};
 use crate::calendar::date::{shift_month, today_for_timezone, visible_month_range};
 use crate::calendar::model::{AgendaResult, DateRange};
 use crate::calendar::view::{CalendarViewMode, YEAR_PAGE_STEP};
@@ -159,58 +159,8 @@ impl AgendaApp {
             }
             AgendaMsg::Close => {}
             AgendaMsg::EscapePressed => {}
-            AgendaMsg::SaveSettings {
-                calendar,
-                timezone,
-                theme_path,
-                language,
-                week_start,
-            } => {
-                use crate::storage::settings::{UserSettings, write_settings};
-                use std::path::PathBuf;
-
-                let calendar = calendar.trim().to_string();
-                let timezone = timezone.trim().to_string();
-                let theme_path = theme_path.trim().to_string();
-                let theme_buf = (!theme_path.is_empty()).then(|| PathBuf::from(theme_path));
-                let new_settings = UserSettings {
-                    calendar: (!calendar.is_empty()).then_some(calendar),
-                    timezone: (!timezone.is_empty()).then_some(timezone),
-                    theme_path: theme_buf,
-                    language: Some(language),
-                    week_start: Some(week_start),
-                };
-
-                let css = match crate::ui::theme::load_css(new_settings.theme_path.as_deref()) {
-                    Ok(css) => css,
-                    Err(err) => {
-                        self.settings_msg = Some(format!(
-                            "{}: {err}",
-                            translate(language, "failed_load_theme")
-                        ));
-                        self.settings_open = true;
-                        return;
-                    }
-                };
-
-                if let Err(err) = write_settings(&new_settings) {
-                    self.settings_msg = Some(format!(
-                        "{}: {err}",
-                        translate(language, "failed_save_settings")
-                    ));
-                    self.settings_open = true;
-                } else {
-                    self.settings_form = new_settings.clone();
-                    self.user_settings = new_settings;
-                    self.query.calendar = self.user_settings.calendar.clone();
-                    self.query.timezone = self.user_settings.timezone.clone();
-
-                    crate::ui::theme::apply_css(&css);
-                    self.settings_msg = None;
-                    self.settings_open = false;
-                    self.load_visible_range(sender, true);
-                }
-            }
+            AgendaMsg::ApplySettings(changes) => self.save_settings(changes, sender, false),
+            AgendaMsg::SaveSettings(changes) => self.save_settings(changes, sender, true),
             AgendaMsg::Logout => {
                 let token_file = paths::oauth_token_file();
                 let mut cleanup_errors = Vec::new();
@@ -319,6 +269,63 @@ impl AgendaApp {
         self.authenticating = true;
         self.state.error = Some(translate(self.language(), "opening_browser_oauth").to_string());
         sender.spawn_oneshot_command(|| AgendaCommandOutput::Auth(google::auth_calendar()));
+    }
+
+    fn save_settings(
+        &mut self,
+        changes: SettingsChanges,
+        sender: ComponentSender<Self>,
+        close_after_save: bool,
+    ) {
+        use crate::storage::settings::{UserSettings, write_settings};
+        use std::path::PathBuf;
+
+        let calendar = changes.calendar.trim().to_string();
+        let timezone = changes.timezone.trim().to_string();
+        let theme_path = changes.theme_path.trim().to_string();
+        let theme_buf = (!theme_path.is_empty()).then(|| PathBuf::from(theme_path));
+        let new_settings = UserSettings {
+            calendar: (!calendar.is_empty()).then_some(calendar),
+            timezone: (!timezone.is_empty()).then_some(timezone),
+            theme_path: theme_buf,
+            language: Some(changes.language),
+            week_start: Some(changes.week_start),
+        };
+
+        let css = match crate::ui::theme::load_css(new_settings.theme_path.as_deref()) {
+            Ok(css) => css,
+            Err(err) => {
+                self.settings_msg = Some(format!(
+                    "{}: {err}",
+                    translate(changes.language, "failed_load_theme")
+                ));
+                self.settings_open = true;
+                return;
+            }
+        };
+
+        if let Err(err) = write_settings(&new_settings) {
+            self.settings_msg = Some(format!(
+                "{}: {err}",
+                translate(changes.language, "failed_save_settings")
+            ));
+            self.settings_open = true;
+            return;
+        }
+
+        self.settings_form = new_settings.clone();
+        self.user_settings = new_settings;
+        self.query.calendar = self.user_settings.calendar.clone();
+        self.query.timezone = self.user_settings.timezone.clone();
+
+        crate::ui::theme::apply_css(&css);
+        self.settings_msg = if close_after_save {
+            None
+        } else {
+            Some(translate(changes.language, "settings_applied").to_string())
+        };
+        self.settings_open = !close_after_save;
+        self.load_visible_range(sender, true);
     }
 
     fn save_and_start_auth(

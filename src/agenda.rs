@@ -16,6 +16,11 @@ use chrono::{Datelike, Local, NaiveDate};
 use gtk::gdk;
 use relm4::{Component, ComponentParts, ComponentSender};
 
+const AGENDA_WINDOW_WIDTH: i32 = 900;
+const AGENDA_WINDOW_HEIGHT: i32 = 500;
+const SETTINGS_WINDOW_WIDTH: i32 = 1080;
+const SETTINGS_WINDOW_HEIGHT: i32 = 680;
+
 #[derive(Debug)]
 pub struct AgendaInit {
     pub query: AgendaQuery,
@@ -34,6 +39,15 @@ pub struct AgendaApp {
     settings_form: UserSettings,
     settings_msg: Option<String>,
     settings_open: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct SettingsChanges {
+    pub calendar: String,
+    pub timezone: String,
+    pub theme_path: String,
+    pub language: Language,
+    pub week_start: WeekStart,
 }
 
 #[derive(Debug)]
@@ -62,13 +76,8 @@ pub enum AgendaMsg {
     CloseSettings,
     Close,
     EscapePressed,
-    SaveSettings {
-        calendar: String,
-        timezone: String,
-        theme_path: String,
-        language: Language,
-        week_start: WeekStart,
-    },
+    ApplySettings(SettingsChanges),
+    SaveSettings(SettingsChanges),
     Logout,
 }
 
@@ -99,8 +108,8 @@ impl Component for AgendaApp {
     fn init_root() -> Self::Root {
         let root = adw::ApplicationWindow::builder()
             .title("Google Calendar")
-            .default_width(900)
-            .default_height(500)
+            .default_width(AGENDA_WINDOW_WIDTH)
+            .default_height(AGENDA_WINDOW_HEIGHT)
             .resizable(false)
             .build();
         root.set_decorated(false);
@@ -317,6 +326,7 @@ impl Component for AgendaApp {
             return;
         }
 
+        set_window_size(root, self.settings_open);
         self.update_view(widgets, sender);
         if should_sync_settings {
             settings::populate_form(&widgets.settings, &self.settings_form);
@@ -332,4 +342,14 @@ impl AgendaApp {
     pub(super) fn week_start(&self) -> WeekStart {
         self.user_settings.week_start.unwrap_or_default()
     }
+}
+
+fn set_window_size(root: &adw::ApplicationWindow, settings_open: bool) {
+    let (width, height) = if settings_open {
+        (SETTINGS_WINDOW_WIDTH, SETTINGS_WINDOW_HEIGHT)
+    } else {
+        (AGENDA_WINDOW_WIDTH, AGENDA_WINDOW_HEIGHT)
+    };
+    root.set_default_size(width, height);
+    root.set_size_request(width, height);
 }
