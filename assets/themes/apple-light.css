@@ -324,15 +324,6 @@ tooltip label {
   min-height: 0;
 }
 
-.settings-topbar {
-  background: rgba(255, 255, 255, 0.62);
-  padding: 8px 10px;
-}
-
-.settings-title-box {
-  min-height: 32px;
-}
-
 /* iOS-style rounded icon tile that sits behind each section glyph. */
 .settings-icon-tile {
   border-radius: 9px;
@@ -342,10 +333,6 @@ tooltip label {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.34),
     0 2px 5px rgba(0, 0, 0, 0.20);
-}
-
-.settings-icon-tile.tint-general {
-  background: linear-gradient(165deg, #a9a9af, #6c6c72);
 }
 
 .settings-icon-tile.tint-calendar {

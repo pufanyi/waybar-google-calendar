@@ -1,7 +1,7 @@
 use super::{AgendaApp, AgendaMsg};
 use crate::storage::paths;
 use crate::storage::settings::{Language, UserSettings, translate};
-use crate::ui::{classed_button, icon_button, label};
+use crate::ui::{classed_button, label};
 use adw::prelude::*;
 use gtk::cairo::{Context, LineCap, LineJoin};
 use relm4::ComponentSender;
@@ -9,7 +9,6 @@ use std::f64::consts::PI;
 
 #[derive(Clone, Copy)]
 enum SettingsIcon {
-    Gear,
     Calendar,
     Sparkle,
     Account,
@@ -21,8 +20,6 @@ pub(super) struct SettingsWidgets {
     pub(super) timezone_entry: gtk::Entry,
     pub(super) theme_entry: gtk::Entry,
     pub(super) language_combo: gtk::ComboBoxText,
-    title: gtk::Label,
-    close_button: gtk::Button,
     cal_tz_title: gtk::Label,
     calendar_label: gtk::Label,
     timezone_label: gtk::Label,
@@ -48,33 +45,6 @@ pub(super) fn build(
     panel.add_css_class("settings-panel");
     panel.set_hexpand(true);
     panel.set_vexpand(true);
-
-    let topbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    topbar.add_css_class("topbar");
-    topbar.add_css_class("settings-topbar");
-
-    let title_box = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    title_box.add_css_class("settings-title-box");
-    title_box.append(&icon_tile(SettingsIcon::Gear, "tint-general"));
-    let title = label(translate(lang, "settings"), &["title"], 0.0, false);
-    title_box.append(&title);
-    topbar.append(&title_box);
-
-    let top_spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    top_spacer.set_hexpand(true);
-    topbar.append(&top_spacer);
-
-    let close_button = icon_button(
-        "go-previous-symbolic",
-        &["close-button", "icon-button"],
-        translate(lang, "close"),
-    );
-    {
-        let sender = sender.clone();
-        close_button.connect_clicked(move |_| sender.input(AgendaMsg::CloseSettings));
-    }
-    topbar.append(&close_button);
-    panel.append(&topbar);
 
     let content = gtk::Box::new(gtk::Orientation::Vertical, 12);
     content.add_css_class("settings-content");
@@ -219,8 +189,6 @@ pub(super) fn build(
         timezone_entry,
         theme_entry,
         language_combo,
-        title,
-        close_button,
         cal_tz_title,
         calendar_label,
         timezone_label,
@@ -239,10 +207,6 @@ pub(super) fn build(
 }
 
 pub(super) fn update_text(widgets: &SettingsWidgets, lang: Language) {
-    widgets.title.set_text(translate(lang, "settings"));
-    widgets
-        .close_button
-        .set_tooltip_text(Some(translate(lang, "close")));
     widgets
         .cal_tz_title
         .set_text(translate(lang, "calendar_timezone"));
@@ -387,29 +351,12 @@ fn draw_settings_icon(cr: &Context, icon: SettingsIcon, width: f64, height: f64)
     cr.set_line_join(LineJoin::Round);
 
     match icon {
-        SettingsIcon::Gear => draw_gear_icon(cr),
         SettingsIcon::Calendar => draw_calendar_icon(cr),
         SettingsIcon::Sparkle => draw_sparkle_icon(cr),
         SettingsIcon::Account => draw_account_icon(cr),
     }
 
     let _ = cr.restore();
-}
-
-fn draw_gear_icon(cr: &Context) {
-    cr.set_line_width(1.45);
-    for step in 0..8 {
-        let angle = f64::from(step) * PI / 4.0;
-        cr.move_to(9.0 + angle.cos() * 5.8, 9.0 + angle.sin() * 5.8);
-        cr.line_to(9.0 + angle.cos() * 7.1, 9.0 + angle.sin() * 7.1);
-    }
-    let _ = cr.stroke();
-
-    cr.set_line_width(1.65);
-    cr.arc(9.0, 9.0, 3.6, 0.0, PI * 2.0);
-    let _ = cr.stroke();
-    cr.arc(9.0, 9.0, 1.25, 0.0, PI * 2.0);
-    let _ = cr.fill();
 }
 
 fn draw_calendar_icon(cr: &Context) {
