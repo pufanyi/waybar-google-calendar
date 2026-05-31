@@ -1,3 +1,5 @@
+mod timeline;
+
 use super::{cards, status};
 use crate::agenda::{AgendaApp, AgendaMsg, AgendaViewMode, auth_prompt};
 use crate::calendar::date::{
@@ -9,7 +11,7 @@ use crate::i18n::translate;
 use crate::storage::settings::Language;
 use crate::ui::{classed_button, label};
 use adw::prelude::*;
-use chrono::{NaiveDate, NaiveTime};
+use chrono::{Datelike, NaiveDate, NaiveTime};
 use relm4::ComponentSender;
 
 pub(super) fn build(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gtk::Box {
@@ -27,7 +29,7 @@ pub(super) fn build(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gt
         events_for_view(model)
     };
 
-    right.append(&now_panel(model, upcoming.first().copied()));
+    right.append(&context_bar(model, upcoming.first().copied()));
     if !focus_auth_prompt {
         right.append(&view_tabs(model, sender.clone()));
         right.append(&header(
@@ -63,31 +65,31 @@ struct BodyRender<'a> {
     view: AgendaViewMode,
 }
 
-fn now_panel(model: &AgendaApp, next_event: Option<&Event>) -> gtk::Box {
+fn context_bar(model: &AgendaApp, next_event: Option<&Event>) -> gtk::Box {
     let lang = model.language();
     let timezone = model.query.timezone.as_deref();
     let panel = gtk::Box::new(gtk::Orientation::Horizontal, 14);
-    panel.add_css_class("agenda-now-panel");
+    panel.add_css_class("agenda-context-bar");
 
     let clock = gtk::Box::new(gtk::Orientation::Vertical, 3);
-    clock.add_css_class("agenda-clock");
-    clock.append(&label(translate(lang, "now"), &["subtle"], 0.0, false));
+    clock.add_css_class("agenda-context-date");
+    clock.append(&label(translate(lang, "today"), &["subtle"], 0.0, false));
     clock.append(&label(
-        &format_now_time_for_timezone(timezone, lang),
-        &["agenda-time"],
+        &format_now_date_for_timezone(timezone, lang),
+        &["agenda-context-title"],
         0.0,
         false,
     ));
     clock.append(&label(
-        &format_now_date_for_timezone(timezone, lang),
-        &["muted"],
+        &format_now_time_for_timezone(timezone, lang),
+        &["agenda-now-pill"],
         0.0,
         false,
     ));
     panel.append(&clock);
 
     let next = gtk::Box::new(gtk::Orientation::Vertical, 5);
-    next.add_css_class("agenda-next");
+    next.add_css_class("agenda-context-next");
     next.set_hexpand(true);
     next.append(&label(translate(lang, "next"), &["subtle"], 0.0, false));
     if let Some(event) = next_event {
@@ -193,8 +195,10 @@ fn body(render: BodyRender<'_>) -> gtk::Box {
             &list,
             error,
             render.visible_events,
+            render.selected_day,
             render.timezone,
             render.lang,
+            render.view,
         );
     } else if render.state.loading {
         list.append(&cards::message(
@@ -202,8 +206,22 @@ fn body(render: BodyRender<'_>) -> gtk::Box {
             Some(translate(render.lang, "showing_cached_refreshing")),
             true,
         ));
-        append_events(&list, render.visible_events, render.timezone, render.lang);
+        append_events(
+            &list,
+            render.visible_events,
+            render.selected_day,
+            render.timezone,
+            render.lang,
+            render.view,
+        );
     } else if render.visible_events.is_empty() {
+        timeline::append_empty_now_reference(
+            &list,
+            render.selected_day,
+            render.timezone,
+            render.lang,
+            render.view,
+        );
         let detail = empty_detail(render.selected_day, render.view, render.lang);
         list.append(&cards::message(
             empty_title(render.view, render.lang),
@@ -211,7 +229,14 @@ fn body(render: BodyRender<'_>) -> gtk::Box {
             false,
         ));
     } else {
-        append_events(&list, render.visible_events, render.timezone, render.lang);
+        append_events(
+            &list,
+            render.visible_events,
+            render.selected_day,
+            render.timezone,
+            render.lang,
+            render.view,
+        );
     }
     list
 }
@@ -220,21 +245,28 @@ fn append_error_state(
     list: &gtk::Box,
     error: &str,
     visible_events: Vec<&Event>,
+    selected_day: Option<NaiveDate>,
     timezone: Option<&str>,
     lang: Language,
+    view: AgendaViewMode,
 ) {
     list.append(&cards::message(
         translate(lang, "refresh_failed"),
         Some(error),
         false,
     ));
-    append_events(list, visible_events, timezone, lang);
+    append_events(list, visible_events, selected_day, timezone, lang, view);
 }
 
-fn append_events(list: &gtk::Box, events: Vec<&Event>, timezone: Option<&str>, lang: Language) {
-    for event in events {
-        list.append(&cards::event(event, timezone, lang));
-    }
+fn append_events(
+    list: &gtk::Box,
+    events: Vec<&Event>,
+    selected_day: Option<NaiveDate>,
+    timezone: Option<&str>,
+    lang: Language,
+    view: AgendaViewMode,
+) {
+    timeline::append_events(list, events, selected_day, timezone, lang, view);
 }
 
 fn events_for_view(model: &AgendaApp) -> Vec<&Event> {
@@ -360,10 +392,18 @@ fn range_text(model: &AgendaApp, lang: Language) -> String {
     match model.agenda_view {
         AgendaViewMode::Day => model
             .selected_day
-            .map(|day| day.format("%a %b %-d").to_string())
+            .map(|day| format_short_day(day, lang))
             .unwrap_or_else(|| format_now_date_for_timezone(model.query.timezone.as_deref(), lang)),
         AgendaViewMode::Month => status::range(model.state.range, lang),
         _ => translate(lang, "coming_up").to_string(),
+    }
+}
+
+fn format_short_day(day: NaiveDate, lang: Language) -> String {
+    if lang == Language::Chinese {
+        format!("{}月{}日", day.month(), day.day())
+    } else {
+        day.format("%a %b %-d").to_string()
     }
 }
 

@@ -271,30 +271,38 @@ tooltip label {
   min-width: 0;
 }
 
-.agenda-now-panel {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(236, 247, 255, 0.78));
-  border: 1px solid rgba(0, 122, 255, 0.18);
-  border-radius: 18px;
-  padding: 14px 16px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.70),
-    0 12px 28px rgba(0, 122, 255, 0.10);
+.agenda-context-bar {
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid @hairline;
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
 }
 
-.agenda-clock {
+.agenda-context-date {
   border-right: 1px solid rgba(60, 60, 67, 0.10);
-  min-width: 180px;
-  padding-right: 14px;
+  min-width: 172px;
+  padding-right: 12px;
 }
 
-.agenda-time {
+.agenda-context-title {
   color: @ink;
-  font-size: 34px;
+  font-size: 16px;
   font-weight: 750;
 }
 
-.agenda-next {
+.agenda-context-next {
   padding-left: 2px;
+}
+
+.agenda-now-pill {
+  background: @danger;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 3px;
+  padding: 2px 8px;
 }
 
 .agenda-view-tabs {
@@ -333,7 +341,73 @@ tooltip label {
 }
 
 .agenda-list {
+  padding-bottom: 4px;
   padding-right: 4px;
+}
+
+.agenda-day-section {
+  min-height: 26px;
+  padding: 6px 0 0;
+}
+
+.agenda-section-title {
+  color: @ink;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.agenda-timeline-row {
+  min-height: 56px;
+}
+
+.agenda-time-rail {
+  min-width: 64px;
+}
+
+.agenda-rail-label {
+  color: @ink_subtle;
+  font-size: 12px;
+  font-weight: 750;
+  padding-top: 8px;
+}
+
+.agenda-rail-line {
+  background: @hairline_soft;
+  min-width: 1px;
+}
+
+.agenda-event-slot {
+  min-width: 0;
+}
+
+.agenda-now-marker {
+  min-height: 24px;
+}
+
+.agenda-now-chip {
+  background: @danger;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  min-width: 50px;
+  padding: 2px 7px;
+}
+
+.agenda-now-track {
+  min-height: 24px;
+}
+
+.agenda-now-dot {
+  background: @danger;
+  border-radius: 999px;
+  min-height: 9px;
+  min-width: 9px;
+}
+
+.agenda-now-line {
+  background: @danger;
+  min-height: 2px;
 }
 
 .agenda-card,
@@ -355,6 +429,15 @@ tooltip label {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.70),
     0 12px 26px rgba(0, 122, 255, 0.14);
+}
+
+.current-event .agenda-card {
+  background: linear-gradient(180deg, rgba(255, 245, 244, 0.96), rgba(255, 255, 255, 0.84));
+  border-color: rgba(255, 59, 48, 0.28);
+  box-shadow:
+    inset 3px 0 0 @danger,
+    inset 0 1px 0 rgba(255, 255, 255, 0.70),
+    0 8px 20px rgba(255, 59, 48, 0.10);
 }
 
 .event-date {
