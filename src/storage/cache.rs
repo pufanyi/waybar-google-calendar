@@ -222,6 +222,7 @@ mod tests {
             location: "Office".to_string(),
             start: "2026-05-30T10:00:00Z".to_string(),
             end: "2026-05-30T11:00:00Z".to_string(),
+            ..Event::default()
         }];
 
         let fetched_at = Local::now();

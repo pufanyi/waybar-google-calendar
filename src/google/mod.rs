@@ -5,10 +5,13 @@ mod types;
 
 use std::{env, sync::OnceLock};
 
-const CALENDAR_SCOPE: &str = "https://www.googleapis.com/auth/calendar.readonly";
+const CALENDAR_SCOPES: &[&str] = &[
+    "https://www.googleapis.com/auth/calendar.readonly",
+    "https://www.googleapis.com/auth/calendar.events",
+];
 const CALENDAR_API: &str = "https://www.googleapis.com/calendar/v3";
 
-pub use api::fetch_events;
+pub use api::{create_event, delete_event, fetch_events, update_event};
 pub use auth::{auth_calendar, save_client_secret};
 pub use transport::open_external_uri;
 

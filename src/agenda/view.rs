@@ -1,5 +1,6 @@
 mod calendar;
 mod cards;
+mod editor;
 mod list;
 mod status;
 

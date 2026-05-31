@@ -1,6 +1,7 @@
 use super::super::cards;
 use super::{event_count_label, event_start_key};
 use crate::agenda::AgendaViewMode;
+use crate::agenda::{AgendaApp, AgendaMsg};
 use crate::calendar::date::{
     event_date_for_timezone, format_now_time_for_timezone, now_parts_for_timezone,
     parse_event_start_for_timezone,
@@ -11,28 +12,38 @@ use crate::storage::settings::Language;
 use crate::ui::label;
 use adw::prelude::*;
 use chrono::{Datelike, NaiveDate};
+use relm4::ComponentSender;
 use std::collections::BTreeMap;
 
-pub(super) fn append_events(
-    list: &gtk::Box,
-    events: Vec<&Event>,
-    selected_day: Option<NaiveDate>,
-    timezone: Option<&str>,
-    lang: Language,
-    view: AgendaViewMode,
-) {
-    let groups = grouped_by_day(events, timezone);
-    let today = now_parts_for_timezone(timezone).0;
-    if view_should_show_now_line(view, selected_day, today) && !groups.contains_key(&Some(today)) {
-        list.append(&day_header(Some(today), 0, timezone, lang));
-        list.append(&now_marker(timezone, lang));
+pub(super) fn append_events(list: &gtk::Box, events: Vec<&Event>, context: TimelineContext<'_>) {
+    let groups = grouped_by_day(events, context.timezone);
+    let today = now_parts_for_timezone(context.timezone).0;
+    if view_should_show_now_line(context.view, context.selected_day, today)
+        && !groups.contains_key(&Some(today))
+    {
+        list.append(&day_header(Some(today), 0, context.timezone, context.lang));
+        list.append(&now_marker(context.timezone, context.lang));
     }
 
     for (date, mut events) in groups {
-        events.sort_by_key(|event| event_start_key(event, timezone));
-        list.append(&day_header(date, events.len(), timezone, lang));
-        append_day_events(list, &events, date, selected_day, timezone, lang, view);
+        events.sort_by_key(|event| event_start_key(event, context.timezone));
+        list.append(&day_header(
+            date,
+            events.len(),
+            context.timezone,
+            context.lang,
+        ));
+        append_day_events(list, &events, date, &context);
     }
+}
+
+#[derive(Clone)]
+pub(super) struct TimelineContext<'a> {
+    pub(super) selected_day: Option<NaiveDate>,
+    pub(super) timezone: Option<&'a str>,
+    pub(super) lang: Language,
+    pub(super) view: AgendaViewMode,
+    pub(super) sender: ComponentSender<AgendaApp>,
 }
 
 pub(super) fn append_empty_now_reference(
@@ -69,34 +80,45 @@ fn append_day_events(
     list: &gtk::Box,
     events: &[&Event],
     date: Option<NaiveDate>,
-    selected_day: Option<NaiveDate>,
-    timezone: Option<&str>,
-    lang: Language,
-    view: AgendaViewMode,
+    context: &TimelineContext<'_>,
 ) {
-    let today = now_parts_for_timezone(timezone).0;
-    let show_now_line = date == Some(today) && view_should_show_now_line(view, selected_day, today);
+    let today = now_parts_for_timezone(context.timezone).0;
+    let show_now_line =
+        date == Some(today) && view_should_show_now_line(context.view, context.selected_day, today);
     let mut marker_inserted = false;
 
-    for event in all_day_events(events, timezone) {
-        list.append(&event_row(event, timezone, lang));
+    for event in all_day_events(events, context.timezone) {
+        list.append(&event_row(
+            event,
+            context.timezone,
+            context.lang,
+            context.sender.clone(),
+        ));
     }
 
-    for event in timed_events(events, timezone) {
-        if show_now_line && !marker_inserted && should_insert_now_before(event, today, timezone) {
-            list.append(&now_marker(timezone, lang));
+    for event in timed_events(events, context.timezone) {
+        if show_now_line
+            && !marker_inserted
+            && should_insert_now_before(event, today, context.timezone)
+        {
+            list.append(&now_marker(context.timezone, context.lang));
             marker_inserted = true;
         }
 
-        let row = event_row(event, timezone, lang);
-        if event_is_current(event, today, timezone) {
+        let row = event_row(
+            event,
+            context.timezone,
+            context.lang,
+            context.sender.clone(),
+        );
+        if event_is_current(event, today, context.timezone) {
             row.add_css_class("current-event");
         }
         list.append(&row);
     }
 
     if show_now_line && !marker_inserted {
-        list.append(&now_marker(timezone, lang));
+        list.append(&now_marker(context.timezone, context.lang));
     }
 }
 
@@ -126,9 +148,22 @@ fn timed_events<'a>(events: &[&'a Event], timezone: Option<&str>) -> Vec<&'a Eve
         .collect()
 }
 
-fn event_row(event: &Event, timezone: Option<&str>, lang: Language) -> gtk::Box {
+fn event_row(
+    event: &Event,
+    timezone: Option<&str>,
+    lang: Language,
+    sender: ComponentSender<AgendaApp>,
+) -> gtk::Box {
     let row = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     row.add_css_class("agenda-timeline-row");
+    if let Some(key) = event.key() {
+        row.add_css_class("clickable-event");
+        let click = gtk::GestureClick::new();
+        click.connect_released(move |_, _, _, _| {
+            sender.input(AgendaMsg::ShowEventDetail(key.clone()));
+        });
+        row.add_controller(click);
+    }
 
     let rail = gtk::Box::new(gtk::Orientation::Vertical, 4);
     rail.add_css_class("agenda-time-rail");

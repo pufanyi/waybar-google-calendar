@@ -1,7 +1,8 @@
 # Google OAuth Client Setup
 
 This app needs a Google OAuth **Desktop app** client so it can request
-read-only access to your Google Calendar from your own computer.
+read access and event management access to your Google Calendar from your own
+computer.
 
 You need two values from Google Cloud:
 
@@ -60,14 +61,15 @@ Platform:
     is available.
 - Test users: add the same Google account whose calendar you want to show.
 
-The app requests this Google Calendar read-only scope during browser login:
+The app requests these Google Calendar scopes during browser login:
 
 ```text
 https://www.googleapis.com/auth/calendar.readonly
+https://www.googleapis.com/auth/calendar.events
 ```
 
 You usually do not need to manually add scopes while creating the client. If
-Google asks for scopes, add the Calendar read-only scope above.
+Google asks for scopes, add both Calendar scopes above.
 
 ## 4. Create a Desktop OAuth Client
 
@@ -96,11 +98,15 @@ In the Waybar Google Calendar popup:
 1. Paste the Client ID.
 2. Paste the Client Secret.
 3. Click **Save & Authenticate**.
-4. Approve read-only Calendar access in the browser.
+4. Approve Calendar read and event management access in the browser.
 
 If Google shows an unverified-app warning, confirm that this is the private app
 you created in your own Google Cloud project and continue with your test user
 account.
+
+If you previously authenticated an older read-only version of this app, log out
+from Settings or delete the token file, then authenticate again so Google grants
+the event management scope.
 
 ## References
 

@@ -1,7 +1,7 @@
 mod timeline;
 
-use super::{cards, status};
-use crate::agenda::{AgendaApp, AgendaMsg, AgendaViewMode, auth_prompt};
+use super::{cards, editor, status};
+use crate::agenda::{AgendaApp, AgendaEditor, AgendaMsg, AgendaViewMode, auth_prompt};
 use crate::calendar::date::{
     event_date_for_timezone, format_now_date_for_timezone, format_now_time_for_timezone,
     format_time_label_for_timezone, now_parts_for_timezone, parse_event_start_for_timezone,
@@ -9,7 +9,7 @@ use crate::calendar::date::{
 use crate::calendar::model::{AgendaState, Event};
 use crate::i18n::translate;
 use crate::storage::settings::Language;
-use crate::ui::{classed_button, label};
+use crate::ui::{classed_button, icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use relm4::ComponentSender;
@@ -29,8 +29,13 @@ pub(super) fn build(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gt
         events_for_view(model)
     };
 
-    right.append(&context_bar(model, upcoming.first().copied()));
-    if !focus_auth_prompt {
+    right.append(&context_bar(
+        model,
+        upcoming.first().copied(),
+        !focus_auth_prompt,
+        sender.clone(),
+    ));
+    if !focus_auth_prompt && model.event_editor == AgendaEditor::None {
         right.append(&view_tabs(model, sender.clone()));
         right.append(&header(
             model,
@@ -40,6 +45,7 @@ pub(super) fn build(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gt
         ));
     }
     right.append(&scrolling_body(BodyRender {
+        model,
         state: &model.state,
         selected_day: model.selected_day,
         authenticating: model.authenticating,
@@ -54,6 +60,7 @@ pub(super) fn build(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gt
 }
 
 struct BodyRender<'a> {
+    model: &'a AgendaApp,
     state: &'a AgendaState,
     selected_day: Option<NaiveDate>,
     authenticating: bool,
@@ -65,7 +72,12 @@ struct BodyRender<'a> {
     view: AgendaViewMode,
 }
 
-fn context_bar(model: &AgendaApp, next_event: Option<&Event>) -> gtk::Box {
+fn context_bar(
+    model: &AgendaApp,
+    next_event: Option<&Event>,
+    can_edit: bool,
+    sender: ComponentSender<AgendaApp>,
+) -> gtk::Box {
     let lang = model.language();
     let timezone = model.query.timezone.as_deref();
     let panel = gtk::Box::new(gtk::Orientation::Horizontal, 14);
@@ -120,6 +132,15 @@ fn context_bar(model: &AgendaApp, next_event: Option<&Event>) -> gtk::Box {
         ));
     }
     panel.append(&next);
+
+    let add = icon_button(
+        "list-add-symbolic",
+        &["action-button", "icon-button"],
+        translate(lang, "add_event"),
+    );
+    add.set_sensitive(can_edit && !model.mutating_event);
+    add.connect_clicked(move |_| sender.input(AgendaMsg::ShowAddEvent));
+    panel.append(&add);
 
     panel
 }
@@ -177,7 +198,9 @@ fn scrolling_body(render: BodyRender<'_>) -> gtk::ScrolledWindow {
 fn body(render: BodyRender<'_>) -> gtk::Box {
     let list = gtk::Box::new(gtk::Orientation::Vertical, 8);
     list.add_css_class("agenda-list");
-    if render.focus_auth_prompt {
+    if render.model.event_editor != AgendaEditor::None {
+        list.append(&editor::build(render.model, render.sender));
+    } else if render.focus_auth_prompt {
         list.append(&auth_prompt::prompt_card(
             render.state.error.as_deref().unwrap_or_default(),
             render.authenticating,
@@ -191,29 +214,16 @@ fn body(render: BodyRender<'_>) -> gtk::Box {
             true,
         ));
     } else if let Some(error) = &render.state.error {
-        append_error_state(
-            &list,
-            error,
-            render.visible_events,
-            render.selected_day,
-            render.timezone,
-            render.lang,
-            render.view,
-        );
+        let context = timeline_context(&render);
+        append_error_state(&list, error, render.visible_events, context);
     } else if render.state.loading {
         list.append(&cards::message(
             translate(render.lang, "refreshing"),
             Some(translate(render.lang, "showing_cached_refreshing")),
             true,
         ));
-        append_events(
-            &list,
-            render.visible_events,
-            render.selected_day,
-            render.timezone,
-            render.lang,
-            render.view,
-        );
+        let context = timeline_context(&render);
+        append_events(&list, render.visible_events, context);
     } else if render.visible_events.is_empty() {
         timeline::append_empty_now_reference(
             &list,
@@ -229,14 +239,8 @@ fn body(render: BodyRender<'_>) -> gtk::Box {
             false,
         ));
     } else {
-        append_events(
-            &list,
-            render.visible_events,
-            render.selected_day,
-            render.timezone,
-            render.lang,
-            render.view,
-        );
+        let context = timeline_context(&render);
+        append_events(&list, render.visible_events, context);
     }
     list
 }
@@ -245,28 +249,28 @@ fn append_error_state(
     list: &gtk::Box,
     error: &str,
     visible_events: Vec<&Event>,
-    selected_day: Option<NaiveDate>,
-    timezone: Option<&str>,
-    lang: Language,
-    view: AgendaViewMode,
+    context: timeline::TimelineContext<'_>,
 ) {
     list.append(&cards::message(
-        translate(lang, "refresh_failed"),
+        translate(context.lang, "refresh_failed"),
         Some(error),
         false,
     ));
-    append_events(list, visible_events, selected_day, timezone, lang, view);
+    append_events(list, visible_events, context);
 }
 
-fn append_events(
-    list: &gtk::Box,
-    events: Vec<&Event>,
-    selected_day: Option<NaiveDate>,
-    timezone: Option<&str>,
-    lang: Language,
-    view: AgendaViewMode,
-) {
-    timeline::append_events(list, events, selected_day, timezone, lang, view);
+fn append_events(list: &gtk::Box, events: Vec<&Event>, context: timeline::TimelineContext<'_>) {
+    timeline::append_events(list, events, context);
+}
+
+fn timeline_context<'a>(render: &BodyRender<'a>) -> timeline::TimelineContext<'a> {
+    timeline::TimelineContext {
+        selected_day: render.selected_day,
+        timezone: render.timezone,
+        lang: render.lang,
+        view: render.view,
+        sender: render.sender.clone(),
+    }
 }
 
 fn events_for_view(model: &AgendaApp) -> Vec<&Event> {

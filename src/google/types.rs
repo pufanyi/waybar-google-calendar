@@ -12,6 +12,8 @@ pub(super) struct CalendarInfo {
     pub(super) id: String,
     #[serde(default)]
     pub(super) summary: String,
+    #[serde(default)]
+    pub(super) primary: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -25,15 +27,44 @@ pub(super) struct EventsListResponse {
 #[derive(Debug, Deserialize)]
 pub(super) struct RawEvent {
     #[serde(default)]
+    pub(super) id: String,
+    #[serde(default)]
     pub(super) status: Option<String>,
+    #[serde(default, rename = "htmlLink")]
+    pub(super) html_link: Option<String>,
     #[serde(default)]
     pub(super) summary: Option<String>,
+    #[serde(default)]
+    pub(super) description: Option<String>,
     #[serde(default)]
     pub(super) location: Option<String>,
     #[serde(default)]
     pub(super) start: RawEventTime,
     #[serde(default)]
     pub(super) end: RawEventTime,
+}
+
+#[derive(Serialize)]
+pub(super) struct EventWritePayload<'a> {
+    pub(super) summary: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub(super) location: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub(super) description: &'a str,
+    pub(super) start: EventWriteTime,
+    pub(super) end: EventWriteTime,
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub(super) enum EventWriteTime {
+    AllDay {
+        date: String,
+    },
+    Timed {
+        #[serde(rename = "dateTime")]
+        date_time: String,
+    },
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -82,11 +113,13 @@ mod tests {
 
     #[test]
     fn test_calendar_list_response_deserialization() {
-        let json = r#"{"items": [{"id": "cal1", "summary": "Work"}, {"id": "cal2"}]}"#;
+        let json =
+            r#"{"items": [{"id": "cal1", "summary": "Work", "primary": true}, {"id": "cal2"}]}"#;
         let response: CalendarListResponse = serde_json::from_str(json).unwrap();
         assert_eq!(response.items.len(), 2);
         assert_eq!(response.items[0].id, "cal1");
         assert_eq!(response.items[0].summary, "Work");
+        assert!(response.items[0].primary);
         assert_eq!(response.items[1].id, "cal2");
         assert_eq!(response.items[1].summary, "");
     }
@@ -96,8 +129,11 @@ mod tests {
         let json = r#"{
             "items": [
                 {
+                    "id": "event1",
                     "status": "confirmed",
+                    "htmlLink": "https://calendar.google.com/event?eid=event1",
                     "summary": "Meeting",
+                    "description": "Discuss roadmap",
                     "location": "Room A",
                     "start": {"dateTime": "2026-05-30T10:00:00Z"},
                     "end": {"date": "2026-05-31"}
@@ -109,8 +145,14 @@ mod tests {
         assert_eq!(response.items.len(), 1);
         assert_eq!(response.next_page_token.as_deref(), Some("token123"));
         let event = &response.items[0];
+        assert_eq!(event.id, "event1");
         assert_eq!(event.status.as_deref(), Some("confirmed"));
+        assert_eq!(
+            event.html_link.as_deref(),
+            Some("https://calendar.google.com/event?eid=event1")
+        );
         assert_eq!(event.summary.as_deref(), Some("Meeting"));
+        assert_eq!(event.description.as_deref(), Some("Discuss roadmap"));
         assert_eq!(event.location.as_deref(), Some("Room A"));
     }
 

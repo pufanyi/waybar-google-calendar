@@ -20,8 +20,12 @@ pub struct Config {
     pub theme_path: Option<PathBuf>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
 pub struct Event {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub calendar_id: String,
     #[serde(default)]
     pub summary: String,
     #[serde(default)]
@@ -29,9 +33,44 @@ pub struct Event {
     #[serde(default)]
     pub location: String,
     #[serde(default)]
+    pub description: String,
+    #[serde(default, rename = "htmlLink")]
+    pub html_link: String,
+    #[serde(default)]
     pub start: String,
     #[serde(default)]
     pub end: String,
+}
+
+impl Event {
+    pub fn key(&self) -> Option<EventKey> {
+        if self.id.is_empty() || self.calendar_id.is_empty() {
+            return None;
+        }
+
+        Some(EventKey {
+            calendar_id: self.calendar_id.clone(),
+            event_id: self.id.clone(),
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EventKey {
+    pub calendar_id: String,
+    pub event_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct EventMutation {
+    pub summary: String,
+    pub location: String,
+    pub description: String,
+    pub start_date: String,
+    pub start_time: String,
+    pub end_date: String,
+    pub end_time: String,
+    pub all_day: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -1,6 +1,6 @@
 use super::transport::open_external_uri;
 use super::types::{ClientSecretFile, InstalledClientSecret};
-use super::{CALENDAR_SCOPE, fetch_timeout, runtime};
+use super::{CALENDAR_SCOPES, fetch_timeout, runtime};
 use crate::calendar::model::FETCH_TIMEOUT_SECONDS;
 use crate::storage::paths;
 use std::fs;
@@ -102,7 +102,7 @@ pub(super) async fn access_token(
         .map_err(|err| format!("Could not initialize Google OAuth: {err}"))?;
 
     let token = auth
-        .token(&[CALENDAR_SCOPE])
+        .token(CALENDAR_SCOPES)
         .await
         .map_err(|err| format!("Could not authenticate Google Calendar: {err}"))?
         .token()

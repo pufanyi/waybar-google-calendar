@@ -20,6 +20,19 @@ pub(super) async fn request_json<T: for<'de> Deserialize<'de>>(
         .map_err(|err| format!("Could not parse Google Calendar response: {err}"))
 }
 
+pub(super) async fn request_empty(request: reqwest::RequestBuilder) -> Result<(), String> {
+    let response = request
+        .send()
+        .await
+        .map_err(|err| format!("Google Calendar request failed: {err}"))?;
+    let status = response.status();
+    if !status.is_success() {
+        let body = response.text().await.unwrap_or_default();
+        return Err(api_error_message(status, &body));
+    }
+    Ok(())
+}
+
 pub fn open_external_uri(uri: &str) -> Result<(), String> {
     gtk::gio::AppInfo::launch_default_for_uri(uri, None::<&gtk::gio::AppLaunchContext>)
         .map_err(|err| format!("Could not open {uri}: {err}"))

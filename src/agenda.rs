@@ -4,7 +4,7 @@ mod settings;
 mod view;
 
 use crate::calendar::date::{today_for_timezone, visible_month_range};
-use crate::calendar::model::{AgendaQuery, AgendaResult, AgendaState};
+use crate::calendar::model::{AgendaQuery, AgendaResult, AgendaState, EventKey, EventMutation};
 use crate::calendar::view::CalendarViewMode;
 use crate::i18n::translate;
 use crate::storage::cache::{cache_is_fresh, read_cache};
@@ -39,6 +39,9 @@ pub struct AgendaApp {
     settings_form: UserSettings,
     settings_msg: Option<String>,
     settings_open: bool,
+    event_editor: AgendaEditor,
+    event_editor_msg: Option<String>,
+    mutating_event: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,6 +54,21 @@ pub enum AgendaViewMode {
 
 impl AgendaViewMode {
     pub const ALL: [Self; 4] = [Self::Now, Self::Upcoming, Self::Day, Self::Month];
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AgendaEditor {
+    None,
+    Add,
+    Detail(EventKey),
+    Edit(EventKey),
+    ConfirmDelete(EventKey),
+}
+
+impl AgendaEditor {
+    fn is_form(&self) -> bool {
+        matches!(self, Self::Add | Self::Edit(_))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -75,6 +93,15 @@ pub enum AgendaMsg {
     ClearSelection,
     SelectDay(NaiveDate),
     SetAgendaView(AgendaViewMode),
+    ShowAddEvent,
+    ShowEventDetail(EventKey),
+    EditEvent(EventKey),
+    ConfirmDelete(EventKey),
+    CloseEventEditor,
+    CreateEvent(EventMutation),
+    UpdateEvent(EventKey, EventMutation),
+    DeleteEvent(EventKey),
+    OpenEventLink(String),
     StartAuth,
     SaveAndStartAuth {
         client_id: String,
@@ -99,6 +126,7 @@ pub enum AgendaMsg {
 pub enum AgendaCommandOutput {
     Events(AgendaResult),
     Auth(Result<(), String>),
+    EventMutation(Result<&'static str, String>),
 }
 
 #[allow(dead_code)]
@@ -256,6 +284,9 @@ impl Component for AgendaApp {
             settings_form: user_settings,
             settings_msg,
             settings_open: false,
+            event_editor: AgendaEditor::None,
+            event_editor_msg: None,
+            mutating_event: false,
         };
 
         let mut widgets = AgendaWidgets {
@@ -343,6 +374,7 @@ impl Component for AgendaApp {
         let should_sync_settings = matches!(message, AgendaMsg::OpenSettings);
         let should_close = matches!(message, AgendaMsg::Close)
             || matches!(message, AgendaMsg::EscapePressed) && !self.settings_open;
+        let should_skip_view = matches!(message, AgendaMsg::Tick) && self.event_editor.is_form();
 
         self.update(message, sender.clone(), root);
         if should_close {
@@ -350,6 +382,10 @@ impl Component for AgendaApp {
         }
 
         set_window_size(root, self.settings_open);
+        if should_skip_view {
+            return;
+        }
+
         self.update_view(widgets, sender);
         if should_sync_settings {
             settings::populate_form(&widgets.settings, &self.settings_form);

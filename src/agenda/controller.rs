@@ -1,8 +1,9 @@
 use super::{
-    AgendaApp, AgendaCommandOutput, AgendaMsg, AgendaViewMode, SettingsChanges, auth_prompt,
+    AgendaApp, AgendaCommandOutput, AgendaEditor, AgendaMsg, AgendaViewMode, SettingsChanges,
+    auth_prompt,
 };
 use crate::calendar::date::{shift_month, today_for_timezone, visible_month_range};
-use crate::calendar::model::{AgendaResult, DateRange};
+use crate::calendar::model::{AgendaResult, DateRange, Event, EventKey, EventMutation};
 use crate::calendar::view::{CalendarViewMode, YEAR_PAGE_STEP};
 use crate::google::{self, fetch_events};
 use crate::i18n::translate;
@@ -106,9 +107,38 @@ impl AgendaApp {
             }
             AgendaMsg::SetAgendaView(view) => {
                 self.agenda_view = view;
+                self.event_editor = AgendaEditor::None;
+                self.event_editor_msg = None;
                 if matches!(view, AgendaViewMode::Day) && self.selected_day.is_none() {
                     self.selected_day = Some(today_for_timezone(self.query.timezone.as_deref()));
                 }
+            }
+            AgendaMsg::ShowAddEvent => {
+                self.event_editor = AgendaEditor::Add;
+                self.event_editor_msg = None;
+            }
+            AgendaMsg::ShowEventDetail(key) => {
+                self.event_editor = AgendaEditor::Detail(key);
+                self.event_editor_msg = None;
+            }
+            AgendaMsg::EditEvent(key) => {
+                self.event_editor = AgendaEditor::Edit(key);
+                self.event_editor_msg = None;
+            }
+            AgendaMsg::ConfirmDelete(key) => {
+                self.event_editor = AgendaEditor::ConfirmDelete(key);
+                self.event_editor_msg = None;
+            }
+            AgendaMsg::CloseEventEditor => {
+                self.event_editor = AgendaEditor::None;
+                self.event_editor_msg = None;
+            }
+            AgendaMsg::CreateEvent(changes) => self.create_event(changes, sender),
+            AgendaMsg::UpdateEvent(key, changes) => self.update_event(key, changes, sender),
+            AgendaMsg::DeleteEvent(key) => self.delete_event(key, sender),
+            AgendaMsg::OpenEventLink(link) => {
+                let lang = self.language();
+                self.open_external(&link, translate(lang, "event_opened"));
             }
             AgendaMsg::StartAuth => self.start_auth(sender),
             AgendaMsg::SaveAndStartAuth {
@@ -228,6 +258,22 @@ impl AgendaApp {
                 self.state.error = Some(error);
             }
             AgendaCommandOutput::Events(result) => self.apply_events_result(result),
+            AgendaCommandOutput::EventMutation(result) => {
+                self.mutating_event = false;
+                match result {
+                    Ok(key) => {
+                        let lang = self.language();
+                        self.event_editor = AgendaEditor::None;
+                        self.event_editor_msg = None;
+                        let _ = clear_agenda_cache();
+                        self.state.error = Some(translate(lang, key).to_string());
+                        self.load_visible_range(sender, true);
+                    }
+                    Err(error) => {
+                        self.event_editor_msg = Some(error);
+                    }
+                }
+            }
         }
     }
 
@@ -283,6 +329,50 @@ impl AgendaApp {
         self.authenticating = true;
         self.state.error = Some(translate(self.language(), "opening_browser_oauth").to_string());
         sender.spawn_oneshot_command(|| AgendaCommandOutput::Auth(google::auth_calendar()));
+    }
+
+    fn create_event(&mut self, changes: EventMutation, sender: ComponentSender<Self>) {
+        if self.mutating_event {
+            return;
+        }
+        self.mutating_event = true;
+        self.event_editor_msg = Some(translate(self.language(), "saving_event").to_string());
+        let query = self.query.clone();
+        sender.spawn_oneshot_command(move || {
+            AgendaCommandOutput::EventMutation(
+                google::create_event(&query, changes).map(|_| "event_created"),
+            )
+        });
+    }
+
+    fn update_event(
+        &mut self,
+        key: EventKey,
+        changes: EventMutation,
+        sender: ComponentSender<Self>,
+    ) {
+        if self.mutating_event {
+            return;
+        }
+        self.mutating_event = true;
+        self.event_editor_msg = Some(translate(self.language(), "saving_event").to_string());
+        let query = self.query.clone();
+        sender.spawn_oneshot_command(move || {
+            AgendaCommandOutput::EventMutation(
+                google::update_event(&query, key, changes).map(|_| "event_updated"),
+            )
+        });
+    }
+
+    fn delete_event(&mut self, key: EventKey, sender: ComponentSender<Self>) {
+        if self.mutating_event {
+            return;
+        }
+        self.mutating_event = true;
+        self.event_editor_msg = Some(translate(self.language(), "deleting_event").to_string());
+        sender.spawn_oneshot_command(move || {
+            AgendaCommandOutput::EventMutation(google::delete_event(key).map(|_| "event_deleted"))
+        });
     }
 
     fn save_settings(
@@ -397,5 +487,14 @@ impl AgendaApp {
             self.state.fetched_at = Some(fetched_at);
             self.state.cached = false;
         }
+    }
+}
+
+impl AgendaApp {
+    pub(super) fn event_by_key(&self, key: &EventKey) -> Option<&Event> {
+        self.state
+            .events
+            .iter()
+            .find(|event| event.calendar_id == key.calendar_id && event.id == key.event_id)
     }
 }

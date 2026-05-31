@@ -5,7 +5,7 @@ GTK4/Relm4 Google Calendar popup for Waybar.
 This project provides a small native Linux desktop popup intended for Waybar's
 clock module:
 
-- `waybar-gcal agenda` shows Google Calendar events for the visible calendar grid.
+- `waybar-gcal agenda` shows and edits Google Calendar events for the visible calendar grid.
 - `waybar-gcal agenda --calendar Work --timezone Asia/Singapore` filters the agenda.
 - `waybar-gcal month` shows a local month calendar.
 - `waybar-gcal auth` starts Google Calendar OAuth authentication.
@@ -98,6 +98,10 @@ The generated token is stored at
 is created by Google OAuth after browser login; it is not something users need
 to paste manually.
 
+The app requests Calendar read access plus event management access so agenda
+can create, update, and delete events. If you authenticated an older read-only
+version, log out from Settings and authenticate again to grant the new scope.
+
 The separate graphical helper remains available:
 
 ```bash
@@ -142,13 +146,15 @@ Use `examples/waybar-clock.json` as a starting point:
 The agenda popup includes an interactive calendar pane and a multi-view agenda
 dashboard. The agenda dashboard keeps the current time and next event visible,
 then renders events as a date-grouped timeline with a red current-time marker
-for today. Switch between `Now`, `Upcoming`, `Day`, and `Month` views. Use the
-chevron buttons to move through the calendar, click the calendar title to switch
-from days to months and years, click a day to open the `Day` view, or use `All`
-and `Today` for quick selection. Events are fetched dynamically for the visible
-calendar grid, so changing months refreshes the Google Calendar range for that
-month. The standalone month popup supports the same day, month, and year
-navigation.
+for today. Click an event to inspect its details, edit title, time, location,
+and description, open it in Google Calendar, or delete it. Use the plus button to
+create a new event on the selected writable calendar. Switch between `Now`,
+`Upcoming`, `Day`, and `Month` views. Use the chevron buttons to move through
+the calendar, click the calendar title to switch from days to months and years,
+click a day to open the `Day` view, or use `All` and `Today` for quick
+selection. Events are fetched dynamically for the visible calendar grid, so
+changing months refreshes the Google Calendar range for that month. The
+standalone month popup supports the same day, month, and year navigation.
 
 Agenda can also filter to a calendar name or ID:
 
@@ -206,6 +212,7 @@ Important CSS classes:
 - `.panel`, `.topbar`, `.left-pane`
 - `.agenda-pane`, `.agenda-context-bar`, `.agenda-view-tabs`, `.agenda-view-tab`
 - `.agenda-day-section`, `.agenda-timeline-row`, `.agenda-now-marker`
+- `.event-editor-panel`, `.event-detail-row`, `.event-form-row`, `.event-editor-actions`
 - `.agenda-card`, `.empty-card`
 - `.settings-card`, `.settings-row`, `.settings-panel`
 - `.settings-icon-tile`, `.settings-icon-glyph`
