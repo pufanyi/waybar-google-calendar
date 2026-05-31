@@ -22,6 +22,7 @@ impl DateTimePicker {
         let calendar = gtk::Calendar::new();
         calendar.add_css_class("datetime-calendar");
         calendar.set_hexpand(true);
+        block_scroll_changes(&calendar);
         if let Ok(date_time) = glib::DateTime::from_local(
             date.year(),
             date.month() as i32,
