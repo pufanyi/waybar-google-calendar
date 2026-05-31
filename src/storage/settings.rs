@@ -12,6 +12,33 @@ pub enum Language {
     Chinese,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum WeekStart {
+    #[default]
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+}
+
+impl WeekStart {
+    pub fn days_from_monday(self) -> u32 {
+        match self {
+            Self::Monday => 0,
+            Self::Tuesday => 1,
+            Self::Wednesday => 2,
+            Self::Thursday => 3,
+            Self::Friday => 4,
+            Self::Saturday => 5,
+            Self::Sunday => 6,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UserSettings {
     pub calendar: Option<String>,
@@ -19,6 +46,8 @@ pub struct UserSettings {
     pub theme_path: Option<PathBuf>,
     #[serde(default, deserialize_with = "deserialize_language")]
     pub language: Option<Language>,
+    #[serde(default, deserialize_with = "deserialize_week_start")]
+    pub week_start: Option<WeekStart>,
 }
 
 pub fn read_settings() -> Result<UserSettings, String> {
@@ -71,6 +100,27 @@ where
     })
 }
 
+fn deserialize_week_start<'de, D>(deserializer: D) -> Result<Option<WeekStart>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = Option::<serde_json::Value>::deserialize(deserializer)?;
+    let Some(serde_json::Value::String(raw)) = value else {
+        return Ok(None);
+    };
+
+    Ok(match raw.as_str() {
+        "monday" => Some(WeekStart::Monday),
+        "tuesday" => Some(WeekStart::Tuesday),
+        "wednesday" => Some(WeekStart::Wednesday),
+        "thursday" => Some(WeekStart::Thursday),
+        "friday" => Some(WeekStart::Friday),
+        "saturday" => Some(WeekStart::Saturday),
+        "sunday" => Some(WeekStart::Sunday),
+        _ => None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -107,6 +157,7 @@ mod tests {
         assert!(settings.timezone.is_none());
         assert!(settings.theme_path.is_none());
         assert_eq!(settings.language, None);
+        assert_eq!(settings.week_start, None);
     }
 
     #[test]
@@ -117,6 +168,7 @@ mod tests {
             timezone: Some("Asia/Singapore".to_string()),
             theme_path: Some(PathBuf::from("/tmp/theme.css")),
             language: Some(Language::Chinese),
+            week_start: Some(WeekStart::Sunday),
         };
 
         write_settings_to(&file, &settings).unwrap();
@@ -130,6 +182,7 @@ mod tests {
             Some(Path::new("/tmp/theme.css"))
         );
         assert_eq!(restored.language, Some(Language::Chinese));
+        assert_eq!(restored.week_start, Some(WeekStart::Sunday));
     }
 
     #[test]
@@ -142,7 +195,8 @@ mod tests {
   "calendar": "primary",
   "timezone": "UTC",
   "theme_path": "/tmp/custom.css",
-  "language": "klingon"
+  "language": "klingon",
+  "week_start": "funday"
 }"#,
         )
         .unwrap();
@@ -157,6 +211,7 @@ mod tests {
             Some(Path::new("/tmp/custom.css"))
         );
         assert_eq!(settings.language, None);
+        assert_eq!(settings.week_start, None);
     }
 
     #[test]

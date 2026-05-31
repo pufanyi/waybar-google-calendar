@@ -1,4 +1,8 @@
-use super::{appearance::AppearanceWidgets, calendar::CalendarWidgets, language};
+use super::{
+    appearance::AppearanceWidgets,
+    calendar::{CalendarWidgets, selected_week_start_from_combo},
+    language,
+};
 use crate::agenda::{AgendaApp, AgendaMsg};
 use crate::i18n::translate;
 use crate::storage::settings::Language;
@@ -44,12 +48,14 @@ pub(super) fn build(
         let timezone_entry = calendar.timezone_entry.clone();
         let theme_entry = appearance.theme_entry.clone();
         let language_combo = appearance.language_combo.clone();
+        let week_start_combo = calendar.week_start_combo.clone();
         save_button.connect_clicked(move |_| {
             sender.input(AgendaMsg::SaveSettings {
                 calendar: calendar_entry.text().to_string(),
                 timezone: timezone_entry.text().to_string(),
                 theme_path: theme_entry.text().to_string(),
                 language: language::selected(&language_combo),
+                week_start: selected_week_start_from_combo(&week_start_combo),
             });
         });
     }

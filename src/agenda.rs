@@ -9,7 +9,7 @@ use crate::calendar::model::{AgendaQuery, AgendaResult, AgendaState};
 use crate::calendar::view::CalendarViewMode;
 use crate::i18n::translate;
 use crate::storage::cache::{cache_is_fresh, read_cache};
-use crate::storage::settings::{Language, UserSettings, read_settings};
+use crate::storage::settings::{Language, UserSettings, WeekStart, read_settings};
 use crate::ui::{icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
@@ -67,6 +67,7 @@ pub enum AgendaMsg {
         timezone: String,
         theme_path: String,
         language: Language,
+        week_start: WeekStart,
     },
     Logout,
 }
@@ -193,7 +194,11 @@ impl Component for AgendaApp {
         root.add_controller(key_controller);
 
         let today = today_for_timezone(init.query.timezone.as_deref());
-        let initial_range = visible_month_range(today.year(), today.month());
+        let initial_range = visible_month_range(
+            today.year(),
+            today.month(),
+            user_settings.week_start.unwrap_or_default(),
+        );
         let initial_cache = read_cache(&init.query, initial_range);
         let state = match &initial_cache {
             Some(cache) => AgendaState {
@@ -322,5 +327,9 @@ impl Component for AgendaApp {
 impl AgendaApp {
     pub(super) fn language(&self) -> Language {
         self.user_settings.language.unwrap_or_default()
+    }
+
+    pub(super) fn week_start(&self) -> WeekStart {
+        self.user_settings.week_start.unwrap_or_default()
     }
 }

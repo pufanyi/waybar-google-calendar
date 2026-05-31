@@ -159,7 +159,7 @@ fn env_path(name: &str) -> Option<PathBuf> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::settings::Language;
+    use crate::storage::settings::{Language, WeekStart};
     use std::path::Path;
 
     fn settings() -> UserSettings {
@@ -168,6 +168,7 @@ mod tests {
             timezone: Some("Asia/Singapore".to_string()),
             theme_path: Some(PathBuf::from("/saved/theme.css")),
             language: Some(Language::Chinese),
+            week_start: Some(WeekStart::Monday),
         }
     }
 

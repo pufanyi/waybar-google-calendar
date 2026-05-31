@@ -12,7 +12,7 @@ use std::io;
 
 impl AgendaApp {
     pub(super) fn current_range(&self) -> DateRange {
-        visible_month_range(self.calendar_year, self.calendar_month)
+        visible_month_range(self.calendar_year, self.calendar_month, self.week_start())
     }
 
     pub(super) fn load_visible_range(&mut self, sender: ComponentSender<Self>, force: bool) {
@@ -164,6 +164,7 @@ impl AgendaApp {
                 timezone,
                 theme_path,
                 language,
+                week_start,
             } => {
                 use crate::storage::settings::{UserSettings, write_settings};
                 use std::path::PathBuf;
@@ -177,6 +178,7 @@ impl AgendaApp {
                     timezone: (!timezone.is_empty()).then_some(timezone),
                     theme_path: theme_buf,
                     language: Some(language),
+                    week_start: Some(week_start),
                 };
 
                 let css = match crate::ui::theme::load_css(new_settings.theme_path.as_deref()) {

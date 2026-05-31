@@ -4,7 +4,7 @@ use crate::calendar::view::{
     calendar_title_text, next_calendar_tooltip, previous_calendar_tooltip, year_page_start,
 };
 use crate::i18n::{month_name, translate, weekday_short};
-use crate::storage::settings::{Language, read_settings};
+use crate::storage::settings::{Language, WeekStart, read_settings};
 use crate::ui::{add_escape_action, classed_button, clear_grid, icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
@@ -17,6 +17,7 @@ pub struct MonthApp {
     view: CalendarViewMode,
     selected: NaiveDate,
     language: Language,
+    week_start: WeekStart,
 }
 
 #[derive(Debug)]
@@ -65,15 +66,16 @@ impl Component for MonthApp {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let today = Local::now().date_naive();
-        let language = read_settings()
-            .map(|settings| settings.language.unwrap_or_default())
-            .unwrap_or_default();
+        let settings = read_settings().unwrap_or_default();
+        let language = settings.language.unwrap_or_default();
+        let week_start = settings.week_start.unwrap_or_default();
         let model = MonthApp {
             year: today.year(),
             month: today.month(),
             view: CalendarViewMode::Days,
             selected: today,
             language,
+            week_start,
         };
 
         let root_box = gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -255,14 +257,20 @@ fn render_day_grid(
 ) {
     configure_day_grid(&widgets.grid);
 
-    for (col, weekday) in weekday_short(model.language).iter().enumerate() {
+    for (col, weekday) in weekday_short(model.language, model.week_start)
+        .iter()
+        .enumerate()
+    {
         let item = label(weekday, &["weekday"], 0.5, false);
         item.set_size_request(40, 22);
         widgets.grid.attach(&item, col as i32, 0, 1, 1);
     }
 
     let today = Local::now().date_naive();
-    for (index, day) in month_dates(model.year, model.month).iter().enumerate() {
+    for (index, day) in month_dates(model.year, model.month, model.week_start)
+        .iter()
+        .enumerate()
+    {
         let row = index / 7 + 1;
         let col = index % 7;
         let item = classed_button(&day.day().to_string(), &["day"]);

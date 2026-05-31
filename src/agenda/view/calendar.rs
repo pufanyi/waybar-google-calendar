@@ -117,15 +117,22 @@ fn day_grid(
         .build();
     grid.set_halign(gtk::Align::Center);
 
-    for (col, weekday) in weekday_short(model.language()).iter().enumerate() {
+    for (col, weekday) in weekday_short(model.language(), model.week_start())
+        .iter()
+        .enumerate()
+    {
         let item = label(weekday, &["weekday"], 0.5, false);
         item.set_size_request(30, 22);
         grid.attach(&item, col as i32, 0, 1, 1);
     }
 
-    for (index, day) in month_dates(model.calendar_year, model.calendar_month)
-        .iter()
-        .enumerate()
+    for (index, day) in month_dates(
+        model.calendar_year,
+        model.calendar_month,
+        model.week_start(),
+    )
+    .iter()
+    .enumerate()
     {
         let row = index / 7 + 1;
         let col = index % 7;

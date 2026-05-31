@@ -1,4 +1,4 @@
-use crate::storage::settings::Language;
+use crate::storage::settings::{Language, WeekStart};
 
 pub fn translate(lang: Language, key: &'static str) -> &'static str {
     match lang {
@@ -102,6 +102,7 @@ pub fn translate(lang: Language, key: &'static str) -> &'static str {
             "untitled_event" => "未命名事件",
             "upcoming" => "即将到来",
             "updated" => "已更新",
+            "week_start" => "每周起始日 (Week Starts On):",
             "window_ready_updates" => "窗口已就绪，日程数据正在更新。",
             _ => key,
         },
@@ -211,6 +212,7 @@ pub fn translate(lang: Language, key: &'static str) -> &'static str {
             "untitled_event" => "Untitled event",
             "upcoming" => "Upcoming",
             "updated" => "Updated",
+            "week_start" => "Week Starts On:",
             "window_ready_updates" => "The window is ready while agenda data updates.",
             _ => key,
         },
@@ -252,11 +254,35 @@ pub fn month_name(lang: Language, month: u32) -> &'static str {
     }
 }
 
-pub fn weekday_short(lang: Language) -> [&'static str; 7] {
+pub fn week_start_name(lang: Language, week_start: WeekStart) -> &'static str {
     match lang {
+        Language::Chinese => match week_start {
+            WeekStart::Monday => "星期一",
+            WeekStart::Tuesday => "星期二",
+            WeekStart::Wednesday => "星期三",
+            WeekStart::Thursday => "星期四",
+            WeekStart::Friday => "星期五",
+            WeekStart::Saturday => "星期六",
+            WeekStart::Sunday => "星期日",
+        },
+        Language::English => match week_start {
+            WeekStart::Monday => "Monday",
+            WeekStart::Tuesday => "Tuesday",
+            WeekStart::Wednesday => "Wednesday",
+            WeekStart::Thursday => "Thursday",
+            WeekStart::Friday => "Friday",
+            WeekStart::Saturday => "Saturday",
+            WeekStart::Sunday => "Sunday",
+        },
+    }
+}
+
+pub fn weekday_short(lang: Language, week_start: WeekStart) -> [&'static str; 7] {
+    let labels = match lang {
         Language::Chinese => ["一", "二", "三", "四", "五", "六", "日"],
         Language::English => ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
-    }
+    };
+    std::array::from_fn(|index| labels[(week_start.days_from_monday() as usize + index) % 7])
 }
 
 #[cfg(test)]

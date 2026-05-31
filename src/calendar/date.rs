@@ -1,6 +1,6 @@
 use crate::calendar::model::{DateRange, Event};
 use crate::i18n::translate;
-use crate::storage::settings::Language;
+use crate::storage::settings::{Language, WeekStart};
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime};
 use chrono_tz::Tz;
 use std::collections::BTreeSet;
@@ -81,17 +81,18 @@ pub fn today_for_timezone(timezone: Option<&str>) -> NaiveDate {
     }
 }
 
-pub fn month_dates(year: i32, month: u32) -> Vec<NaiveDate> {
+pub fn month_dates(year: i32, month: u32, week_start: WeekStart) -> Vec<NaiveDate> {
     let first = NaiveDate::from_ymd_opt(year, month, 1).expect("valid month");
-    let offset = first.weekday().num_days_from_monday() as i64;
+    let offset = (first.weekday().num_days_from_monday() + 7 - week_start.days_from_monday()) % 7;
+    let offset = offset as i64;
     let start = first - ChronoDuration::days(offset);
     (0..42)
         .map(|day| start + ChronoDuration::days(day))
         .collect()
 }
 
-pub fn visible_month_range(year: i32, month: u32) -> DateRange {
-    let dates = month_dates(year, month);
+pub fn visible_month_range(year: i32, month: u32, week_start: WeekStart) -> DateRange {
+    let dates = month_dates(year, month, week_start);
     DateRange {
         start: *dates.first().expect("month grid has a start date"),
         end_exclusive: *dates.last().expect("month grid has an end date") + ChronoDuration::days(1),
@@ -136,7 +137,7 @@ mod tests {
 
     #[test]
     fn month_grid_has_six_weeks_starting_monday() {
-        let dates = month_dates(2026, 5);
+        let dates = month_dates(2026, 5, WeekStart::Monday);
         assert_eq!(dates.len(), 42);
         assert_eq!(dates.first().unwrap().weekday().number_from_monday(), 1);
         assert!(
@@ -148,11 +149,23 @@ mod tests {
 
     #[test]
     fn visible_month_range_covers_rendered_grid() {
-        let range = visible_month_range(2026, 5);
+        let range = visible_month_range(2026, 5, WeekStart::Monday);
         assert_eq!(range.start, NaiveDate::from_ymd_opt(2026, 4, 27).unwrap());
         assert_eq!(
             range.end_exclusive,
             NaiveDate::from_ymd_opt(2026, 6, 8).unwrap()
+        );
+    }
+
+    #[test]
+    fn month_grid_can_start_on_sunday() {
+        let dates = month_dates(2026, 5, WeekStart::Sunday);
+
+        assert_eq!(dates.len(), 42);
+        assert_eq!(dates.first().unwrap().weekday().number_from_sunday(), 1);
+        assert_eq!(
+            *dates.first().unwrap(),
+            NaiveDate::from_ymd_opt(2026, 4, 26).unwrap()
         );
     }
 

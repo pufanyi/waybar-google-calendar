@@ -108,7 +108,7 @@ waybar-gcal auth-ui
 
 The agenda popup features an in-window settings panel accessible by clicking the gear icon (Settings) in the top-right corner. It allows you to customize options directly from the UI without editing configuration files or restarting:
 
-- **Calendar & Timezone**: Set a specific Calendar Name/ID (e.g. `primary` or your workspace calendar ID) and timezone override. Saving changes will immediately re-fetch the Google Calendar events for the new configurations.
+- **Calendar & Timezone**: Set a specific Calendar Name/ID (e.g. `primary` or your workspace calendar ID), timezone override, and the first day of the week. Saving changes will immediately re-fetch the Google Calendar events for the new configurations.
 - **Appearance**: Specify a custom CSS stylesheet theme file path. Upon saving, the theme is dynamically reloaded in the running application in real-time.
 - **Language**: Choose between English (default) and Chinese (中文). Saving changes dynamically localizes the entire interface in real-time.
 - **Google Account Status**: Check if the client secret and token files are present. You can:
