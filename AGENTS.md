@@ -50,6 +50,9 @@ Guidance for agents working in this repository.
   `.settings-panel`, `.settings-section`, `.settings-icon-tile`,
   `.settings-icon-glyph`, `.settings-form-row`, and `.settings-footer`; keep
   theme support in sync when changing that panel.
+- The agenda dashboard uses `.agenda-pane`, `.agenda-now-panel`,
+  `.agenda-view-tabs`, `.agenda-view-tab`, `.agenda-list-header`, and
+  `.agenda-list`; keep theme support in sync when changing those views.
 - The Google OAuth setup prompt links to
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.

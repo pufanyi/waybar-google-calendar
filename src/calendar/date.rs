@@ -74,10 +74,34 @@ pub fn event_date_for_timezone(event: &Event, timezone: Option<&str>) -> Option<
 }
 
 pub fn today_for_timezone(timezone: Option<&str>) -> NaiveDate {
+    now_parts_for_timezone(timezone).0
+}
+
+pub fn now_parts_for_timezone(timezone: Option<&str>) -> (NaiveDate, NaiveTime) {
     if let Some(tz) = timezone.and_then(|timezone| timezone.parse::<Tz>().ok()) {
-        Local::now().with_timezone(&tz).date_naive()
+        let now = Local::now().with_timezone(&tz);
+        (now.date_naive(), now.time())
     } else {
-        Local::now().date_naive()
+        let now = Local::now();
+        (now.date_naive(), now.time())
+    }
+}
+
+pub fn format_now_time_for_timezone(timezone: Option<&str>, lang: Language) -> String {
+    let (_, time) = now_parts_for_timezone(timezone);
+    if lang == Language::Chinese {
+        time.format("%H:%M").to_string()
+    } else {
+        time.format("%-I:%M %p").to_string()
+    }
+}
+
+pub fn format_now_date_for_timezone(timezone: Option<&str>, lang: Language) -> String {
+    let (date, _) = now_parts_for_timezone(timezone);
+    if lang == Language::Chinese {
+        format!("{}年{}月{}日", date.year(), date.month(), date.day())
+    } else {
+        date.format("%A, %B %-d").to_string()
     }
 }
 

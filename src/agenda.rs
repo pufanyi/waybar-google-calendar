@@ -12,11 +12,11 @@ use crate::storage::settings::{Language, UserSettings, WeekStart, read_settings}
 use crate::ui::{icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
-use gtk::gdk;
+use gtk::{gdk, glib};
 use relm4::{Component, ComponentParts, ComponentSender};
 
-const AGENDA_WINDOW_WIDTH: i32 = 900;
-const AGENDA_WINDOW_HEIGHT: i32 = 500;
+const AGENDA_WINDOW_WIDTH: i32 = 1060;
+const AGENDA_WINDOW_HEIGHT: i32 = 620;
 const SETTINGS_WINDOW_WIDTH: i32 = 1080;
 const SETTINGS_WINDOW_HEIGHT: i32 = 680;
 
@@ -32,12 +32,25 @@ pub struct AgendaApp {
     calendar_year: i32,
     calendar_month: u32,
     calendar_view: CalendarViewMode,
+    agenda_view: AgendaViewMode,
     selected_day: Option<NaiveDate>,
     authenticating: bool,
     user_settings: UserSettings,
     settings_form: UserSettings,
     settings_msg: Option<String>,
     settings_open: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgendaViewMode {
+    Now,
+    Upcoming,
+    Day,
+    Month,
+}
+
+impl AgendaViewMode {
+    pub const ALL: [Self; 4] = [Self::Now, Self::Upcoming, Self::Day, Self::Month];
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +74,7 @@ pub enum AgendaMsg {
     Today,
     ClearSelection,
     SelectDay(NaiveDate),
+    SetAgendaView(AgendaViewMode),
     StartAuth,
     SaveAndStartAuth {
         client_id: String,
@@ -75,6 +89,7 @@ pub enum AgendaMsg {
     CloseSettings,
     Close,
     EscapePressed,
+    Tick,
     ApplySettings(SettingsChanges),
     SaveSettings(SettingsChanges),
     Logout,
@@ -234,6 +249,7 @@ impl Component for AgendaApp {
             calendar_year: today.year(),
             calendar_month: today.month(),
             calendar_view: CalendarViewMode::Days,
+            agenda_view: AgendaViewMode::Now,
             selected_day: None,
             authenticating: false,
             user_settings: user_settings.clone(),
@@ -258,6 +274,14 @@ impl Component for AgendaApp {
             .unwrap_or(true);
         if should_fetch {
             sender.input(AgendaMsg::LoadVisibleRange);
+        }
+
+        {
+            let sender = sender.clone();
+            glib::timeout_add_seconds_local(30, move || {
+                sender.input(AgendaMsg::Tick);
+                glib::ControlFlow::Continue
+            });
         }
 
         ComponentParts { model, widgets }

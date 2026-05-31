@@ -139,13 +139,15 @@ Use `examples/waybar-clock.json` as a starting point:
 }
 ```
 
-The agenda popup includes an interactive calendar pane. Use the chevron buttons
-to move through the current view, click the calendar title to switch from days
-to months and years, click a day to filter the agenda list, or use `All` and
-`Today` for quick selection. Events are fetched dynamically for the visible
-calendar grid, so changing months refreshes the Google Calendar range for that
-month. The standalone month popup supports the same day, month, and year
-navigation.
+The agenda popup includes an interactive calendar pane and a multi-view agenda
+dashboard. The agenda dashboard keeps the current time and next event visible,
+then lets you switch between `Now`, `Upcoming`, `Day`, and `Month` views. Use
+the chevron buttons to move through the calendar, click the calendar title to
+switch from days to months and years, click a day to open the `Day` view, or use
+`All` and `Today` for quick selection. Events are fetched dynamically for the
+visible calendar grid, so changing months refreshes the Google Calendar range
+for that month. The standalone month popup supports the same day, month, and
+year navigation.
 
 Agenda can also filter to a calendar name or ID:
 
@@ -201,6 +203,7 @@ WAYBAR_GCAL_THEME=~/.config/waybar-google-calendar/style.css waybar-gcal month
 Important CSS classes:
 
 - `.panel`, `.topbar`, `.left-pane`
+- `.agenda-pane`, `.agenda-now-panel`, `.agenda-view-tabs`, `.agenda-view-tab`
 - `.agenda-card`, `.empty-card`
 - `.settings-card`, `.settings-row`, `.settings-panel`
 - `.settings-icon-tile`, `.settings-icon-glyph`

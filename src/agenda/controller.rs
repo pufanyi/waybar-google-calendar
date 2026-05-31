@@ -1,4 +1,6 @@
-use super::{AgendaApp, AgendaCommandOutput, AgendaMsg, SettingsChanges, auth_prompt};
+use super::{
+    AgendaApp, AgendaCommandOutput, AgendaMsg, AgendaViewMode, SettingsChanges, auth_prompt,
+};
 use crate::calendar::date::{shift_month, today_for_timezone, visible_month_range};
 use crate::calendar::model::{AgendaResult, DateRange};
 use crate::calendar::view::{CalendarViewMode, YEAR_PAGE_STEP};
@@ -87,15 +89,25 @@ impl AgendaApp {
             }
             AgendaMsg::ClearSelection => {
                 self.selected_day = None;
+                if self.agenda_view == AgendaViewMode::Day {
+                    self.agenda_view = AgendaViewMode::Now;
+                }
             }
             AgendaMsg::SelectDay(day) => {
                 let previous_range = self.current_range();
                 self.calendar_year = day.year();
                 self.calendar_month = day.month();
                 self.calendar_view = CalendarViewMode::Days;
+                self.agenda_view = AgendaViewMode::Day;
                 self.selected_day = Some(day);
                 if self.current_range() != previous_range {
                     self.load_visible_range(sender, false);
+                }
+            }
+            AgendaMsg::SetAgendaView(view) => {
+                self.agenda_view = view;
+                if matches!(view, AgendaViewMode::Day) && self.selected_day.is_none() {
+                    self.selected_day = Some(today_for_timezone(self.query.timezone.as_deref()));
                 }
             }
             AgendaMsg::StartAuth => self.start_auth(sender),
@@ -159,6 +171,7 @@ impl AgendaApp {
             }
             AgendaMsg::Close => {}
             AgendaMsg::EscapePressed => {}
+            AgendaMsg::Tick => {}
             AgendaMsg::ApplySettings(changes) => self.save_settings(changes, sender, false),
             AgendaMsg::SaveSettings(changes) => self.save_settings(changes, sender, true),
             AgendaMsg::Logout => {
@@ -259,6 +272,7 @@ impl AgendaApp {
         self.calendar_year = today.year();
         self.calendar_month = today.month();
         self.calendar_view = CalendarViewMode::Days;
+        self.agenda_view = AgendaViewMode::Day;
         self.selected_day = Some(today);
     }
 

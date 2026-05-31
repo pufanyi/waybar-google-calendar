@@ -20,6 +20,14 @@ pub fn auth_calendar() -> Result<(), String> {
 }
 
 pub fn save_client_secret(client_id: &str, client_secret: &str) -> Result<PathBuf, String> {
+    save_client_secret_to_file(client_id, client_secret, paths::client_secret_file())
+}
+
+fn save_client_secret_to_file(
+    client_id: &str,
+    client_secret: &str,
+    secret_file: PathBuf,
+) -> Result<PathBuf, String> {
     let client_id = client_id.trim();
     let client_secret = client_secret.trim();
     if client_id.is_empty() {
@@ -29,7 +37,6 @@ pub fn save_client_secret(client_id: &str, client_secret: &str) -> Result<PathBu
         return Err("Client Secret is empty.".to_string());
     }
 
-    let secret_file = paths::client_secret_file();
     if let Some(parent) = secret_file.parent() {
         fs::create_dir_all(parent)
             .map_err(|err| format!("Could not create folder {}: {err}", parent.display()))?;
@@ -164,9 +171,6 @@ fn create_secure_dir(path: &std::path::Path) -> Result<(), String> {
 mod tests {
     use super::*;
     use std::fs;
-    use std::sync::Mutex;
-
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     #[test]
     fn test_save_client_secret_validation() {
@@ -220,19 +224,16 @@ mod tests {
 
     #[test]
     fn test_save_client_secret_roundtrip() {
-        let _guard = ENV_LOCK.lock().unwrap();
-
         let temp_dir =
             std::env::temp_dir().join(format!("gcal-auth-test-secret-{}", std::process::id()));
         let _ = fs::remove_dir_all(&temp_dir);
         fs::create_dir_all(&temp_dir).unwrap();
 
         let secret_file = temp_dir.join("client_secret.json");
-        unsafe {
-            std::env::set_var("WAYBAR_GCAL_CLIENT_SECRET", &secret_file);
-        }
 
-        let path = save_client_secret("my_client_id", "my_client_secret").unwrap();
+        let path =
+            save_client_secret_to_file("my_client_id", "my_client_secret", secret_file.clone())
+                .unwrap();
         assert_eq!(path, secret_file);
         assert!(secret_file.exists());
 
@@ -248,9 +249,6 @@ mod tests {
             assert_eq!(mode & 0o777, 0o600);
         }
 
-        unsafe {
-            std::env::remove_var("WAYBAR_GCAL_CLIENT_SECRET");
-        }
         let _ = fs::remove_dir_all(&temp_dir);
     }
 }

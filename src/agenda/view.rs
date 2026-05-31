@@ -35,14 +35,7 @@ pub(super) fn render(
         &calendar_event_days,
         sender.clone(),
     ));
-    widgets.content.append(&list::build(
-        &model.query,
-        &model.state,
-        model.selected_day,
-        model.authenticating,
-        model.language(),
-        sender,
-    ));
+    widgets.content.append(&list::build(model, sender));
     update_topbar(model, widgets);
 }
 
