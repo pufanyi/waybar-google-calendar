@@ -5,11 +5,16 @@ use crate::storage::paths;
 use chrono::{DateTime, Local};
 use std::env;
 use std::fs;
+use std::path::Path;
 
 const CACHE_VERSION: u32 = 3;
 
 pub fn read_cache(query: &AgendaQuery, range: DateRange) -> Option<CachedEvents> {
     let file = paths::cache_file(&cache_key(query, range));
+    read_cache_from(&file, query, range)
+}
+
+fn read_cache_from(file: &Path, query: &AgendaQuery, range: DateRange) -> Option<CachedEvents> {
     let payload: CachePayload = serde_json::from_str(&fs::read_to_string(file).ok()?).ok()?;
     if payload.version != CACHE_VERSION
         || payload.calendar != query.calendar
@@ -35,6 +40,16 @@ pub fn write_cache(
     fetched_at: DateTime<Local>,
 ) -> Result<(), String> {
     let file = paths::cache_file(&cache_key(query, range));
+    write_cache_to(&file, query, range, events, fetched_at)
+}
+
+fn write_cache_to(
+    file: &Path,
+    query: &AgendaQuery,
+    range: DateRange,
+    events: &[Event],
+    fetched_at: DateTime<Local>,
+) -> Result<(), String> {
     if let Some(parent) = file.parent() {
         fs::create_dir_all(parent)
             .map_err(|err| format!("Could not create cache folder {}: {err}", parent.display()))?;
@@ -50,16 +65,20 @@ pub fn write_cache(
     };
     let json = serde_json::to_string(&payload)
         .map_err(|err| format!("Could not serialize agenda cache: {err}"))?;
-    fs::write(&file, json).map_err(|err| format!("Could not write cache {}: {err}", file.display()))
+    fs::write(file, json).map_err(|err| format!("Could not write cache {}: {err}", file.display()))
 }
 
 pub fn clear_agenda_cache() -> Result<usize, String> {
     let dir = paths::cache_dir();
+    clear_agenda_cache_in(&dir)
+}
+
+fn clear_agenda_cache_in(dir: &Path) -> Result<usize, String> {
     if !dir.exists() {
         return Ok(0);
     }
 
-    let entries = fs::read_dir(&dir)
+    let entries = fs::read_dir(dir)
         .map_err(|err| format!("Could not read cache folder {}: {err}", dir.display()))?;
     let mut removed = 0;
     let mut errors = Vec::new();
@@ -100,6 +119,10 @@ pub fn cache_is_fresh(fetched_at: DateTime<Local>) -> bool {
         .ok()
         .and_then(|value| value.parse::<i64>().ok())
         .unwrap_or(CACHE_TTL_SECONDS);
+    cache_is_fresh_with_ttl(fetched_at, ttl)
+}
+
+fn cache_is_fresh_with_ttl(fetched_at: DateTime<Local>, ttl: i64) -> bool {
     (Local::now() - fetched_at).num_seconds() <= ttl
 }
 
@@ -133,49 +156,16 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
-    struct EnvGuard {
-        _lock: std::sync::MutexGuard<'static, ()>,
-        original_xdg: Option<std::ffi::OsString>,
-        original_ttl: Option<std::ffi::OsString>,
-        temp_dir: PathBuf,
+    fn temp_cache_file(name: &str) -> PathBuf {
+        let dir = env::temp_dir().join(format!("gcal-test-cache-{}-{}", name, std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir.join("agenda-test.json")
     }
 
-    impl EnvGuard {
-        fn new(name: &str) -> Self {
-            let lock = crate::test_env::ENV_LOCK
-                .lock()
-                .unwrap_or_else(|error| error.into_inner());
-            let original_xdg = env::var_os("XDG_CACHE_HOME");
-            let original_ttl = env::var_os("GCAL_CACHE_TTL");
-            let temp_dir = env::temp_dir().join(format!("gcal-test-cache-{}", name));
-            let _ = fs::remove_dir_all(&temp_dir);
-            unsafe {
-                env::set_var("XDG_CACHE_HOME", &temp_dir);
-            }
-            Self {
-                _lock: lock,
-                original_xdg,
-                original_ttl,
-                temp_dir,
-            }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            unsafe {
-                if let Some(v) = &self.original_xdg {
-                    env::set_var("XDG_CACHE_HOME", v);
-                } else {
-                    env::remove_var("XDG_CACHE_HOME");
-                }
-                if let Some(v) = &self.original_ttl {
-                    env::set_var("GCAL_CACHE_TTL", v);
-                } else {
-                    env::remove_var("GCAL_CACHE_TTL");
-                }
-            }
-            let _ = fs::remove_dir_all(&self.temp_dir);
+    fn cleanup(path: &Path) {
+        if let Some(parent) = path.parent() {
+            let _ = fs::remove_dir_all(parent);
         }
     }
 
@@ -198,25 +188,25 @@ mod tests {
 
     #[test]
     fn test_cache_is_fresh() {
-        let _guard = EnvGuard::new("fresh");
-
         let now = Local::now();
-        assert!(cache_is_fresh(now));
+        assert!(cache_is_fresh_with_ttl(now, CACHE_TTL_SECONDS));
 
         let old = now - chrono::Duration::seconds(CACHE_TTL_SECONDS + 10);
-        assert!(!cache_is_fresh(old));
+        assert!(!cache_is_fresh_with_ttl(old, CACHE_TTL_SECONDS));
 
-        // Test custom TTL override
-        unsafe {
-            env::set_var("GCAL_CACHE_TTL", "10");
-        }
-        assert!(cache_is_fresh(now - chrono::Duration::seconds(5)));
-        assert!(!cache_is_fresh(now - chrono::Duration::seconds(15)));
+        assert!(cache_is_fresh_with_ttl(
+            now - chrono::Duration::seconds(5),
+            10
+        ));
+        assert!(!cache_is_fresh_with_ttl(
+            now - chrono::Duration::seconds(15),
+            10
+        ));
     }
 
     #[test]
     fn test_read_write_cache_roundtrip() {
-        let _guard = EnvGuard::new("roundtrip");
+        let file = temp_cache_file("roundtrip");
 
         let query = AgendaQuery {
             calendar: Some("my-calendar".to_string()),
@@ -235,9 +225,9 @@ mod tests {
         }];
 
         let fetched_at = Local::now();
-        write_cache(&query, range, &events, fetched_at).unwrap();
+        write_cache_to(&file, &query, range, &events, fetched_at).unwrap();
 
-        let cached = read_cache(&query, range).expect("Should successfully read cache");
+        let cached = read_cache_from(&file, &query, range).expect("Should successfully read cache");
         assert_eq!(cached.events.len(), 1);
         assert_eq!(cached.events[0].summary, "Meeting");
         assert_eq!(cached.fetched_at.timestamp(), fetched_at.timestamp());
@@ -247,14 +237,15 @@ mod tests {
             calendar: Some("my-calendar".to_string()),
             timezone: Some("EST".to_string()),
         };
-        assert!(read_cache(&query_diff_tz, range).is_none());
+        assert!(read_cache_from(&file, &query_diff_tz, range).is_none());
 
         // Check range mismatch
         let range_diff = DateRange {
             start: chrono::NaiveDate::from_ymd_opt(2026, 5, 30).unwrap(),
             end_exclusive: chrono::NaiveDate::from_ymd_opt(2026, 6, 1).unwrap(),
         };
-        assert!(read_cache(&query, range_diff).is_none());
+        assert!(read_cache_from(&file, &query, range_diff).is_none());
+        cleanup(&file);
     }
 
     #[test]
@@ -269,16 +260,17 @@ mod tests {
 
     #[test]
     fn clear_agenda_cache_only_removes_agenda_json_files() {
-        let _guard = EnvGuard::new("clear");
-        let dir = paths::cache_dir();
+        let dir = env::temp_dir().join(format!("gcal-test-cache-clear-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         fs::write(dir.join("agenda-one.json"), "{}").unwrap();
         fs::write(dir.join("agenda-two.json"), "{}").unwrap();
         fs::write(dir.join("other.json"), "{}").unwrap();
 
-        assert_eq!(clear_agenda_cache().unwrap(), 2);
+        assert_eq!(clear_agenda_cache_in(&dir).unwrap(), 2);
         assert!(!dir.join("agenda-one.json").exists());
         assert!(!dir.join("agenda-two.json").exists());
         assert!(dir.join("other.json").exists());
+        let _ = fs::remove_dir_all(&dir);
     }
 }

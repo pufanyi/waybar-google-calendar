@@ -15,6 +15,13 @@ pub fn builtin_css() -> &'static str {
 }
 
 pub fn load_css(explicit_path: Option<&Path>) -> Result<String, String> {
+    load_css_with_config_theme(explicit_path, &paths::config_theme_file())
+}
+
+fn load_css_with_config_theme(
+    explicit_path: Option<&Path>,
+    config_theme_file: &Path,
+) -> Result<String, String> {
     let mut css = String::from(BUILTIN_CSS);
 
     if let Some(path) = explicit_path {
@@ -22,9 +29,8 @@ pub fn load_css(explicit_path: Option<&Path>) -> Result<String, String> {
         return Ok(css);
     }
 
-    let path = paths::config_theme_file();
-    if path.exists() {
-        append_theme_file(&mut css, &path)?;
+    if config_theme_file.exists() {
+        append_theme_file(&mut css, config_theme_file)?;
     }
 
     Ok(css)
@@ -60,47 +66,15 @@ fn append_theme_file(css: &mut String, path: &Path) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
     use std::fs;
     use std::path::PathBuf;
 
-    struct EnvGuard {
-        _lock: std::sync::MutexGuard<'static, ()>,
-        original_config: Option<std::ffi::OsString>,
-        temp_dir: PathBuf,
-    }
-
-    impl EnvGuard {
-        fn new(name: &str) -> Self {
-            let lock = crate::test_env::ENV_LOCK
-                .lock()
-                .unwrap_or_else(|error| error.into_inner());
-            let original_config = env::var_os("XDG_CONFIG_HOME");
-            let temp_dir = env::temp_dir().join(format!("gcal-test-theme-{}", name));
-            let _ = fs::remove_dir_all(&temp_dir);
-            let _ = fs::create_dir_all(&temp_dir);
-            unsafe {
-                env::set_var("XDG_CONFIG_HOME", &temp_dir);
-            }
-            Self {
-                _lock: lock,
-                original_config,
-                temp_dir,
-            }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            unsafe {
-                if let Some(v) = &self.original_config {
-                    env::set_var("XDG_CONFIG_HOME", v);
-                } else {
-                    env::remove_var("XDG_CONFIG_HOME");
-                }
-            }
-            let _ = fs::remove_dir_all(&self.temp_dir);
-        }
+    fn temp_theme_dir(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("gcal-test-theme-{}-{}", name, std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
     }
 
     #[test]
@@ -111,38 +85,40 @@ mod tests {
 
     #[test]
     fn test_load_css_no_custom() {
-        let _guard = EnvGuard::new("no-custom");
-        let css = load_css(None).unwrap();
+        let dir = temp_theme_dir("no-custom");
+        let css = load_css_with_config_theme(None, &dir.join("missing.css")).unwrap();
+        let _ = fs::remove_dir_all(dir);
         assert_eq!(css, builtin_css());
     }
 
     #[test]
     fn test_load_css_explicit_path() {
-        let _guard = EnvGuard::new("explicit");
-        let custom_file = _guard.temp_dir.join("custom.css");
+        let dir = temp_theme_dir("explicit");
+        let custom_file = dir.join("custom.css");
         fs::write(&custom_file, ".my-class { color: red; }").unwrap();
 
         let css = load_css(Some(&custom_file)).unwrap();
+        let _ = fs::remove_dir_all(dir);
         assert!(css.contains(".my-class { color: red; }"));
         assert!(css.contains("/* User theme overrides */"));
     }
 
     #[test]
     fn test_load_css_config_theme_file() {
-        let _guard = EnvGuard::new("config-theme");
-        let custom_theme_dir = _guard.temp_dir.join("waybar-google-calendar");
-        fs::create_dir_all(&custom_theme_dir).unwrap();
-        let custom_file = custom_theme_dir.join("style.css");
+        let dir = temp_theme_dir("config-theme");
+        let custom_file = dir.join("style.css");
         fs::write(&custom_file, ".config-class { color: blue; }").unwrap();
 
-        let css = load_css(None).unwrap();
+        let css = load_css_with_config_theme(None, &custom_file).unwrap();
+        let _ = fs::remove_dir_all(dir);
         assert!(css.contains(".config-class { color: blue; }"));
     }
 
     #[test]
     fn test_load_css_invalid_file() {
-        let _guard = EnvGuard::new("invalid");
-        let non_existent = _guard.temp_dir.join("nonexistent.css");
+        let dir = temp_theme_dir("invalid");
+        let non_existent = dir.join("nonexistent.css");
         assert!(load_css(Some(&non_existent)).is_err());
+        let _ = fs::remove_dir_all(dir);
     }
 }
