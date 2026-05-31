@@ -1,4 +1,3 @@
-#![allow(deprecated)]
 mod auth_prompt;
 mod controller;
 mod settings;

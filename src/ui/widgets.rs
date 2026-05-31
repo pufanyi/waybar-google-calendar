@@ -38,6 +38,26 @@ pub fn icon_button(icon_name: &str, classes: &[&str], tooltip: &str) -> gtk::But
     widget
 }
 
+pub fn drop_down() -> gtk::DropDown {
+    let widget = gtk::DropDown::from_strings(&[]);
+    let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::BOTH_AXES);
+    scroll.set_propagation_phase(gtk::PropagationPhase::Capture);
+    scroll.connect_scroll(|_, _, _| glib::Propagation::Stop);
+    widget.add_controller(scroll);
+    widget
+}
+
+pub fn set_drop_down_strings(widget: &gtk::DropDown, labels: &[&str], selected: usize) {
+    let model = gtk::StringList::new(labels);
+    widget.set_model(Some(&model));
+    let selected = if labels.is_empty() {
+        gtk::INVALID_LIST_POSITION
+    } else {
+        selected.min(labels.len() - 1) as u32
+    };
+    widget.set_selected(selected);
+}
+
 pub fn clear_box(container: &gtk::Box) {
     while let Some(child) = container.first_child() {
         container.remove(&child);

@@ -103,6 +103,9 @@ Run `cargo fmt` before finalizing changes when formatting is needed.
   patterns where practical. Use direct gtk4-rs/libadwaita APIs mainly for
   widget construction, styling, and low-level signal forwarding into Relm4
   messages.
+- Avoid deprecated GTK/libadwaita APIs in new code when a maintained
+  replacement exists. If a deprecated API must be kept temporarily, keep the
+  allowance as narrow as possible and document why it remains.
 - For UI changes, update `assets/themes/apple-light.css` only when new or changed CSS classes need theme support.
 - Keep user-facing OAuth/setup text accurate and concrete; the README documents the current authentication flow.
 - Prefer in-window state changes, panels, and view transitions over adding new

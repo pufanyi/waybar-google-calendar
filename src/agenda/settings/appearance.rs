@@ -2,13 +2,13 @@ use super::language;
 use super::layout::{SettingsIcon, field_row, section, section_title};
 use crate::i18n::translate;
 use crate::storage::settings::{Language, UserSettings};
-use crate::ui::label;
+use crate::ui::{drop_down, label};
 use adw::prelude::*;
 
 pub(super) struct AppearanceWidgets {
     pub(super) section: gtk::Box,
     pub(super) theme_entry: gtk::Entry,
-    pub(super) language_combo: gtk::ComboBoxText,
+    pub(super) language_dropdown: gtk::DropDown,
     title: gtk::Label,
     theme_label: gtk::Label,
     language_label: gtk::Label,
@@ -33,14 +33,18 @@ pub(super) fn build(settings: &UserSettings, lang: Language) -> AppearanceWidget
     section.append(&field_row(&theme_label, &theme_entry));
 
     let language_label = label(translate(lang, "language"), &["field-label"], 0.0, false);
-    let language_combo = gtk::ComboBoxText::new();
-    language::set_options(&language_combo, lang, settings.language.unwrap_or_default());
-    section.append(&field_row(&language_label, &language_combo));
+    let language_dropdown = drop_down();
+    language::set_options(
+        &language_dropdown,
+        lang,
+        settings.language.unwrap_or_default(),
+    );
+    section.append(&field_row(&language_label, &language_dropdown));
 
     AppearanceWidgets {
         section,
         theme_entry,
-        language_combo,
+        language_dropdown,
         title,
         theme_label,
         language_label,
@@ -51,7 +55,7 @@ pub(super) fn update_text(widgets: &AppearanceWidgets, lang: Language) {
     widgets.title.set_text(translate(lang, "appearance"));
     widgets.theme_label.set_text(translate(lang, "theme_path"));
     widgets.language_label.set_text(translate(lang, "language"));
-    language::update_options(&widgets.language_combo, lang);
+    language::update_options(&widgets.language_dropdown, lang);
 }
 
 pub(super) fn populate_form(widgets: &AppearanceWidgets, settings: &UserSettings) {
@@ -64,8 +68,6 @@ pub(super) fn populate_form(widgets: &AppearanceWidgets, settings: &UserSettings
             .unwrap_or(""),
     );
     widgets
-        .language_combo
-        .set_active_id(Some(language::language_id(
-            settings.language.unwrap_or_default(),
-        )));
+        .language_dropdown
+        .set_selected(language::language_index(settings.language.unwrap_or_default()) as u32);
 }

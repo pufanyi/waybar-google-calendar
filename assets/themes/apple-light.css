@@ -453,9 +453,9 @@ tooltip label {
   outline: none;
 }
 
-combobox.text-entry,
-combobox.text-entry:focus,
-combobox.text-entry:focus-within {
+dropdown.text-entry,
+dropdown.text-entry:focus,
+dropdown.text-entry:focus-within {
   background: transparent;
   border: 0;
   border-radius: 0;
@@ -464,7 +464,7 @@ combobox.text-entry:focus-within {
   outline: none;
 }
 
-combobox.text-entry button.combo {
+dropdown.text-entry button {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(60, 60, 67, 0.13);
   border-radius: 9px;
@@ -475,20 +475,20 @@ combobox.text-entry button.combo {
   transition: all 150ms ease;
 }
 
-combobox.text-entry button.combo:hover {
+dropdown.text-entry button:hover {
   background: rgba(255, 255, 255, 0.86);
   border-color: rgba(60, 60, 67, 0.22);
 }
 
-combobox.text-entry button.combo:focus,
-combobox.text-entry button.combo:checked {
+dropdown.text-entry button:focus,
+dropdown.text-entry button:checked {
   background: #ffffff;
   border-color: @accent;
   box-shadow: 0 0 0 3px @accent_ring;
   outline: none;
 }
 
-combobox.text-entry arrow {
+dropdown.text-entry arrow {
   color: @ink_muted;
   opacity: 0.82;
 }
