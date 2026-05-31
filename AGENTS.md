@@ -46,8 +46,9 @@ Guidance for agents working in this repository.
 - Google Calendar access is implemented with `yup-oauth2` and `reqwest`.
 - The built-in GTK CSS theme is `assets/themes/apple-light.css`.
 - The agenda settings panel uses settings-specific CSS classes such as
-  `.settings-panel`, `.settings-section`, `.settings-form-row`, and
-  `.settings-footer`; keep theme support in sync when changing that panel.
+  `.settings-panel`, `.settings-section`, `.settings-icon-tile`,
+  `.settings-icon-glyph`, `.settings-form-row`, and `.settings-footer`; keep
+  theme support in sync when changing that panel.
 - The Google OAuth setup prompt links to
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.
@@ -96,6 +97,11 @@ Run `cargo fmt` before finalizing changes when formatting is needed.
 - Do not remove or overwrite user changes in a dirty worktree.
 - Prefer existing patterns in `src/agenda.rs`, `src/agenda/`, `src/month/`,
   `src/auth_ui/`, and shared helpers in `src/ui/`.
+- Prefer Relm4 for UI architecture: model state, messages, component lifecycle,
+  commands, and update flow should live in `Component`/`SimpleComponent`
+  patterns where practical. Use direct gtk4-rs/libadwaita APIs mainly for
+  widget construction, styling, and low-level signal forwarding into Relm4
+  messages.
 - For UI changes, update `assets/themes/apple-light.css` only when new or changed CSS classes need theme support.
 - Keep user-facing OAuth/setup text accurate and concrete; the README documents the current authentication flow.
 - Prefer in-window state changes, panels, and view transitions over adding new

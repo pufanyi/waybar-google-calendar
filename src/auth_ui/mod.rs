@@ -1,6 +1,6 @@
 use crate::google;
 use crate::storage::paths;
-use crate::ui::{add_escape_to_close, classed_button, label};
+use crate::ui::{add_escape_action, classed_button, label};
 use adw::prelude::*;
 use gtk::gio;
 use relm4::{Component, ComponentParts, ComponentSender};
@@ -31,6 +31,7 @@ pub enum AuthMsg {
     OpenConfigDir,
     OpenTokenDir,
     OpenGoogleCloud,
+    Close,
 }
 
 #[derive(Debug)]
@@ -85,8 +86,8 @@ impl Component for AuthApp {
 
         let close = classed_button("x", &["close-button"]);
         {
-            let root = root.clone();
-            close.connect_clicked(move |_| root.close());
+            let sender = sender.clone();
+            close.connect_clicked(move |_| sender.input(AuthMsg::Close));
         }
         topbar.append(&close);
         root_box.append(&topbar);
@@ -146,7 +147,10 @@ impl Component for AuthApp {
         root_box.append(&message);
 
         root.set_content(Some(&root_box));
-        add_escape_to_close(&root);
+        {
+            let sender = sender.clone();
+            add_escape_action(&root, move || sender.input(AuthMsg::Close));
+        }
 
         let model = AuthApp {
             status: AuthStatus::read(),
@@ -167,7 +171,7 @@ impl Component for AuthApp {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AuthMsg::Start => {
                 if self.loading {
@@ -198,6 +202,9 @@ impl Component for AuthApp {
                 self.message = google::open_external_uri(GOOGLE_CLOUD_CREDENTIALS_URL)
                     .map(|_| "Google Cloud opened in your browser.".to_string())
                     .unwrap_or_else(|error| error);
+            }
+            AuthMsg::Close => {
+                root.close();
             }
         }
     }

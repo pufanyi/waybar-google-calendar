@@ -135,6 +135,7 @@ impl AgendaApp {
                 );
             }
             AgendaMsg::OpenSettings => {
+                self.settings_form = crate::storage::settings::read_settings();
                 self.settings_msg = None;
                 self.settings_open = true;
             }
@@ -142,6 +143,7 @@ impl AgendaApp {
                 self.settings_msg = None;
                 self.settings_open = false;
             }
+            AgendaMsg::Close => {}
             AgendaMsg::SaveSettings {
                 calendar,
                 timezone,
@@ -151,10 +153,13 @@ impl AgendaApp {
                 use crate::storage::settings::{UserSettings, write_settings};
                 use std::path::PathBuf;
 
-                let theme_buf = theme_path.filter(|s| !s.is_empty()).map(PathBuf::from);
+                let calendar = calendar.trim().to_string();
+                let timezone = timezone.trim().to_string();
+                let theme_path = theme_path.trim().to_string();
+                let theme_buf = (!theme_path.is_empty()).then(|| PathBuf::from(theme_path));
                 let new_settings = UserSettings {
-                    calendar: calendar.filter(|s| !s.is_empty()),
-                    timezone: timezone.filter(|s| !s.is_empty()),
+                    calendar: (!calendar.is_empty()).then_some(calendar),
+                    timezone: (!timezone.is_empty()).then_some(timezone),
                     theme_path: theme_buf,
                     language: Some(language),
                 };
@@ -163,6 +168,7 @@ impl AgendaApp {
                     self.settings_msg = Some(format!("Failed to save settings: {err}"));
                     self.settings_open = true;
                 } else {
+                    self.settings_form = new_settings.clone();
                     self.user_settings = new_settings;
                     self.query.calendar = self.user_settings.calendar.clone();
                     self.query.timezone = self.user_settings.timezone.clone();

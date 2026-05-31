@@ -1,9 +1,9 @@
 use crate::calendar::date::{month_dates, month_name, shift_month};
 use crate::calendar::view::{CalendarViewMode, YEAR_GRID_COUNT, YEAR_PAGE_STEP, year_page_start};
-use crate::ui::{add_escape_to_close, classed_button, clear_grid, icon_button, label};
+use crate::ui::{add_escape_action, classed_button, clear_grid, icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
-use relm4::{ComponentParts, ComponentSender, SimpleComponent};
+use relm4::{Component, ComponentParts, ComponentSender};
 
 #[derive(Debug)]
 pub struct MonthApp {
@@ -22,6 +22,7 @@ pub enum MonthMsg {
     SelectYear(i32),
     Today,
     Select(NaiveDate),
+    Close,
 }
 
 pub struct MonthWidgets {
@@ -33,10 +34,11 @@ pub struct MonthWidgets {
     selected_label: gtk::Label,
 }
 
-impl SimpleComponent for MonthApp {
+impl Component for MonthApp {
     type Init = ();
     type Input = MonthMsg;
     type Output = ();
+    type CommandOutput = ();
     type Root = adw::ApplicationWindow;
     type Widgets = MonthWidgets;
 
@@ -109,8 +111,8 @@ impl SimpleComponent for MonthApp {
         root_box.append(&bottom);
 
         {
-            let root = root.clone();
-            close.connect_clicked(move |_| root.close());
+            let sender = sender.clone();
+            close.connect_clicked(move |_| sender.input(MonthMsg::Close));
         }
         {
             let sender = sender.clone();
@@ -130,7 +132,10 @@ impl SimpleComponent for MonthApp {
         }
 
         root.set_content(Some(&root_box));
-        add_escape_to_close(&root);
+        {
+            let sender = sender.clone();
+            add_escape_action(&root, move || sender.input(MonthMsg::Close));
+        }
 
         let mut widgets = MonthWidgets {
             previous,
@@ -145,7 +150,7 @@ impl SimpleComponent for MonthApp {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
+    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             MonthMsg::Previous => {
                 self.move_month(-1);
@@ -176,6 +181,9 @@ impl SimpleComponent for MonthApp {
                 self.year = day.year();
                 self.month = day.month();
                 self.view = CalendarViewMode::Days;
+            }
+            MonthMsg::Close => {
+                root.close();
             }
         }
     }

@@ -325,7 +325,8 @@ tooltip label {
 }
 
 .settings-topbar {
-  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.62);
+  padding: 8px 10px;
 }
 
 .settings-title-box {
@@ -359,17 +360,9 @@ tooltip label {
   background: linear-gradient(165deg, #44d06a, #1aa64b);
 }
 
-.settings-title-icon,
-.settings-section-icon {
-  color: @accent;
-  opacity: 0.86;
-  -gtk-icon-size: 16px;
-}
-
-.settings-icon-tile .settings-title-icon,
-.settings-icon-tile .settings-section-icon {
-  color: #ffffff;
-  opacity: 1;
+.settings-icon-glyph {
+  min-width: 18px;
+  min-height: 18px;
 }
 
 .settings-scroll {
@@ -378,21 +371,21 @@ tooltip label {
 }
 
 .settings-content {
-  padding: 1px 2px;
+  padding: 1px 5px 9px 1px;
 }
 
 .settings-section {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.66));
-  border: 1px solid @hairline;
-  border-radius: 16px;
-  padding: 14px 14px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(250, 251, 253, 0.74));
+  border: 1px solid rgba(60, 60, 67, 0.11);
+  border-radius: 14px;
+  padding: 13px 14px 9px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.62),
-    0 10px 22px rgba(0, 0, 0, 0.06);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 8px 18px rgba(29, 29, 31, 0.045);
 }
 
 .settings-section-header {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   min-height: 30px;
 }
 
@@ -402,33 +395,40 @@ tooltip label {
 }
 
 .settings-form-row {
-  background: @fill_subtle;
-  border: 1px solid @hairline_soft;
-  border-radius: 13px;
-  min-height: 46px;
-  padding: 7px 11px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid @hairline_soft;
+  border-radius: 0;
+  min-height: 44px;
+  padding: 7px 8px;
   transition: all 160ms ease;
 }
 
+.settings-form-row:last-child {
+  border-bottom: 0;
+}
+
 .settings-form-row:focus-within {
-  background: @accent_softer;
-  border-color: rgba(0, 122, 255, 0.30);
+  background: rgba(0, 122, 255, 0.035);
+  border-bottom-color: rgba(0, 122, 255, 0.24);
+  border-radius: 10px;
 }
 
 .settings-inline-actions {
-  margin-top: 2px;
+  margin-top: 8px;
 }
 
 .settings-footer {
-  background: rgba(255, 255, 255, 0.66);
-  border: 1px solid @hairline;
-  border-radius: 15px;
-  padding: 8px 10px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid @hairline_soft;
+  border-radius: 0;
+  padding: 10px 0 0;
+  box-shadow: none;
 }
 
 .settings-message {
-  min-height: 30px;
+  min-height: 32px;
 }
 
 .path-label {
@@ -442,17 +442,19 @@ tooltip label {
 }
 
 .text-entry {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid @hairline_strong;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(60, 60, 67, 0.13);
+  border-radius: 9px;
   color: @ink;
   min-height: 32px;
   padding: 3px 11px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
   transition: all 150ms ease;
 }
 
 .text-entry:hover {
-  border-color: rgba(60, 60, 67, 0.28);
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(60, 60, 67, 0.22);
 }
 
 .text-entry:focus,

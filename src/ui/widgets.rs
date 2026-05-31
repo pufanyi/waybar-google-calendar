@@ -48,12 +48,14 @@ pub fn clear_grid(grid: &gtk::Grid) {
     }
 }
 
-pub fn add_escape_to_close(window: &adw::ApplicationWindow) {
+pub fn add_escape_action<F>(window: &adw::ApplicationWindow, on_escape: F)
+where
+    F: Fn() + 'static,
+{
     let controller = gtk::EventControllerKey::new();
-    let window_for_handler = window.clone();
     controller.connect_key_pressed(move |_, key, _, _| {
         if key == gdk::Key::Escape {
-            window_for_handler.close();
+            on_escape();
             glib::Propagation::Stop
         } else {
             glib::Propagation::Proceed

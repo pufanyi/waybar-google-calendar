@@ -32,6 +32,7 @@ pub struct AgendaApp {
     selected_day: Option<NaiveDate>,
     authenticating: bool,
     user_settings: UserSettings,
+    settings_form: UserSettings,
     settings_msg: Option<String>,
     settings_open: bool,
 }
@@ -60,10 +61,11 @@ pub enum AgendaMsg {
     OpenCalendarApi,
     OpenSettings,
     CloseSettings,
+    Close,
     SaveSettings {
-        calendar: Option<String>,
-        timezone: Option<String>,
-        theme_path: Option<String>,
+        calendar: String,
+        timezone: String,
+        theme_path: String,
         language: Language,
     },
     Logout,
@@ -154,28 +156,7 @@ impl Component for AgendaApp {
         );
         {
             let sender = sender.clone();
-            let c_entry = settings_widgets.calendar_entry.clone();
-            let t_entry = settings_widgets.timezone_entry.clone();
-            let th_entry = settings_widgets.theme_entry.clone();
-            let l_combo = settings_widgets.language_combo.clone();
-            settings_button.connect_clicked(move |_| {
-                let current = read_settings();
-                c_entry.set_text(current.calendar.as_deref().unwrap_or(""));
-                t_entry.set_text(current.timezone.as_deref().unwrap_or(""));
-                th_entry.set_text(
-                    current
-                        .theme_path
-                        .as_ref()
-                        .map(|p| p.to_string_lossy())
-                        .as_deref()
-                        .unwrap_or(""),
-                );
-                l_combo.set_active_id(Some(match current.language.unwrap_or_default() {
-                    Language::English => "english",
-                    Language::Chinese => "chinese",
-                }));
-                sender.input(AgendaMsg::OpenSettings);
-            });
+            settings_button.connect_clicked(move |_| sender.input(AgendaMsg::OpenSettings));
         }
         topbar.append(&settings_button);
 
@@ -185,8 +166,8 @@ impl Component for AgendaApp {
             translate(lang, "close"),
         );
         {
-            let root = root.clone();
-            close.connect_clicked(move |_| root.close());
+            let sender = sender.clone();
+            close.connect_clicked(move |_| sender.input(AgendaMsg::Close));
         }
         topbar.append(&close);
         root_box.append(&topbar);
@@ -198,7 +179,6 @@ impl Component for AgendaApp {
         let settings_open_flag = Rc::new(Cell::new(false));
         let key_controller = gtk::EventControllerKey::new();
         {
-            let root = root.clone();
             let sender = sender.clone();
             let settings_open_flag = settings_open_flag.clone();
             key_controller.connect_key_pressed(move |_, key, _, _| {
@@ -206,7 +186,7 @@ impl Component for AgendaApp {
                     if settings_open_flag.get() {
                         sender.input(AgendaMsg::CloseSettings);
                     } else {
-                        root.close();
+                        sender.input(AgendaMsg::Close);
                     }
                     gtk::glib::Propagation::Stop
                 } else {
@@ -247,7 +227,8 @@ impl Component for AgendaApp {
             calendar_view: CalendarViewMode::Days,
             selected_day: None,
             authenticating: false,
-            user_settings,
+            user_settings: user_settings.clone(),
+            settings_form: user_settings,
             settings_msg: None,
             settings_open: false,
         };
@@ -274,8 +255,11 @@ impl Component for AgendaApp {
         ComponentParts { model, widgets }
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
-        self.handle_input(message, sender);
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
+        match message {
+            AgendaMsg::Close => root.close(),
+            message => self.handle_input(message, sender),
+        }
     }
 
     fn update_cmd(
@@ -312,5 +296,26 @@ impl Component for AgendaApp {
             self.authenticating,
             self.settings_msg.as_deref(),
         );
+    }
+
+    fn update_with_view(
+        &mut self,
+        widgets: &mut Self::Widgets,
+        message: Self::Input,
+        sender: ComponentSender<Self>,
+        root: &Self::Root,
+    ) {
+        let should_sync_settings = matches!(message, AgendaMsg::OpenSettings);
+        let should_close = matches!(message, AgendaMsg::Close);
+
+        self.update(message, sender.clone(), root);
+        if should_close {
+            return;
+        }
+
+        self.update_view(widgets, sender);
+        if should_sync_settings {
+            settings::populate_form(&widgets.settings, &self.settings_form);
+        }
     }
 }

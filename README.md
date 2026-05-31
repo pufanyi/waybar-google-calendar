@@ -198,6 +198,7 @@ Important CSS classes:
 - `.panel`, `.topbar`, `.left-pane`
 - `.agenda-card`, `.empty-card`
 - `.settings-card`, `.settings-row`, `.settings-panel`, `.settings-topbar`
+- `.settings-icon-tile`, `.settings-icon-glyph`
 - `.settings-section`, `.settings-form-row`, `.settings-footer`, `.settings-message`
 - `.status-badge`, `.path-label`, `.auth-prompt`
 - `.auth-current-status`, `.auth-wizard-page`, `.auth-step-actions`, `.auth-helper-actions`
