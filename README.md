@@ -60,7 +60,7 @@ The source tree is grouped by responsibility:
 - `src/i18n/`: localized UI text and calendar labels.
 - `src/month/`: standalone local month calendar popup.
 - `src/storage/`: cache and filesystem paths.
-- `src/ui/`: shared GTK helpers and theme loading.
+- `src/ui/`: shared GTK helpers, reusable picker widgets, and theme loading.
 
 ## Authentication
 
@@ -112,7 +112,7 @@ waybar-gcal auth-ui
 
 The agenda popup features an in-window settings panel accessible by clicking the gear icon (Settings) in the top-right corner. It allows you to customize options directly from the UI without editing configuration files or restarting:
 
-- **Calendar & Timezone**: Set a specific Calendar Name/ID (e.g. `primary` or your workspace calendar ID), timezone override, and the first day of the week (Sunday by default). Saving changes will immediately re-fetch the Google Calendar events for the new configurations.
+- **Calendar & Timezone**: Set a specific Calendar Name/ID (e.g. `primary` or your workspace calendar ID), choose a searchable IANA timezone override, and set the first day of the week (Sunday by default). Saving changes will immediately re-fetch the Google Calendar events for the new configurations.
 - **Appearance**: Specify a custom CSS stylesheet theme file path. Upon saving, the theme is dynamically reloaded in the running application in real-time.
 - **Language**: Choose between English (default) and Chinese (中文). Saving changes dynamically localizes the entire interface in real-time.
 - **Google Account Status**: Check if the client secret and token files are present. You can:
@@ -146,9 +146,11 @@ Use `examples/waybar-clock.json` as a starting point:
 The agenda popup includes an interactive calendar pane and a multi-view agenda
 dashboard. The agenda dashboard keeps the current time and next event visible,
 then renders events as a date-grouped timeline with a red current-time marker
-for today. Click an event to inspect its details, edit title, time, location,
-and description, open it in Google Calendar, or delete it. Use the plus button to
-create a new event on the selected writable calendar. Switch between `Now`,
+for today. Click an event to inspect its details, edit title, date, time,
+location, and description, open it in Google Calendar, or delete it. Event date
+and time fields use calendar and spinner controls instead of raw text fields.
+Use the plus button to create a new event on the selected writable calendar.
+Switch between `Now`,
 `Upcoming`, `Day`, and `Month` views. Use the chevron buttons to move through
 the calendar, click the calendar title to switch from days to months and years,
 click a day to open the `Day` view, or use `All` and `Today` for quick
@@ -213,6 +215,7 @@ Important CSS classes:
 - `.agenda-pane`, `.agenda-context-bar`, `.agenda-view-tabs`, `.agenda-view-tab`
 - `.agenda-day-section`, `.agenda-timeline-row`, `.agenda-now-marker`
 - `.event-editor-panel`, `.event-detail-row`, `.event-form-row`, `.event-editor-actions`
+- `.datetime-picker`, `.datetime-calendar`, `.datetime-time-row`, `.datetime-spin`
 - `.agenda-card`, `.empty-card`
 - `.settings-card`, `.settings-row`, `.settings-panel`
 - `.settings-icon-tile`, `.settings-icon-glyph`

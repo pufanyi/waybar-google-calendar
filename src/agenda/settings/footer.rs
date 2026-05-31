@@ -6,7 +6,7 @@ use super::{
 use crate::agenda::{AgendaApp, AgendaMsg, SettingsChanges};
 use crate::i18n::translate;
 use crate::storage::settings::Language;
-use crate::ui::{classed_button, label};
+use crate::ui::{classed_button, label, selected_time_zone};
 use adw::prelude::*;
 use relm4::ComponentSender;
 
@@ -45,14 +45,14 @@ pub(super) fn build(
     {
         let sender = sender.clone();
         let calendar_entry = calendar.calendar_entry.clone();
-        let timezone_entry = calendar.timezone_entry.clone();
+        let timezone_dropdown = calendar.timezone_dropdown.clone();
         let theme_entry = appearance.theme_entry.clone();
         let language_dropdown = appearance.language_dropdown.clone();
         let week_start_dropdown = calendar.week_start_dropdown.clone();
         apply_button.connect_clicked(move |_| {
             sender.input(AgendaMsg::ApplySettings(SettingsChanges {
                 calendar: calendar_entry.text().to_string(),
-                timezone: timezone_entry.text().to_string(),
+                timezone: selected_time_zone(&timezone_dropdown).unwrap_or_default(),
                 theme_path: theme_entry.text().to_string(),
                 language: language::selected(&language_dropdown),
                 week_start: selected_week_start_from_dropdown(&week_start_dropdown),
@@ -66,14 +66,14 @@ pub(super) fn build(
     {
         let sender = sender.clone();
         let calendar_entry = calendar.calendar_entry.clone();
-        let timezone_entry = calendar.timezone_entry.clone();
+        let timezone_dropdown = calendar.timezone_dropdown.clone();
         let theme_entry = appearance.theme_entry.clone();
         let language_dropdown = appearance.language_dropdown.clone();
         let week_start_dropdown = calendar.week_start_dropdown.clone();
         save_button.connect_clicked(move |_| {
             sender.input(AgendaMsg::SaveSettings(SettingsChanges {
                 calendar: calendar_entry.text().to_string(),
-                timezone: timezone_entry.text().to_string(),
+                timezone: selected_time_zone(&timezone_dropdown).unwrap_or_default(),
                 theme_path: theme_entry.text().to_string(),
                 language: language::selected(&language_dropdown),
                 week_start: selected_week_start_from_dropdown(&week_start_dropdown),

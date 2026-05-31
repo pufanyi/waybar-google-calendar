@@ -33,7 +33,7 @@ Guidance for agents working in this repository.
   - `src/google/`: Google Calendar API, OAuth, transport helpers, and response types.
   - `src/i18n/`: localized UI text and calendar labels.
   - `src/month/`: standalone local month calendar popup.
-  - `src/ui/`: shared GTK widget helpers and theme loading.
+  - `src/ui/`: shared GTK widget helpers, reusable picker widgets, and theme loading.
 - `src/agenda.rs` defines the agenda component entrypoint, state, messages, and
   Relm4 wiring.
   Agenda rendering helpers live under `src/agenda/`:
@@ -57,8 +57,9 @@ Guidance for agents working in this repository.
   `.agenda-view-tabs`, `.agenda-view-tab`, `.agenda-list-header`,
   `.agenda-list`, `.agenda-day-section`, `.agenda-timeline-row`, and
   `.agenda-now-marker`; event editing uses `.event-editor-panel`,
-  `.event-detail-row`, `.event-form-row`, and `.event-editor-actions`; keep
-  theme support in sync when changing those views.
+  `.event-detail-row`, `.event-form-row`, `.event-editor-actions`,
+  `.datetime-picker`, `.datetime-calendar`, `.datetime-time-row`, and
+  `.datetime-spin`; keep theme support in sync when changing those views.
 - The Google OAuth setup prompt links to
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.

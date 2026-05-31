@@ -7,9 +7,9 @@ use crate::calendar::date::{
 use crate::calendar::model::{Event, EventKey, EventMutation};
 use crate::i18n::translate;
 use crate::storage::settings::Language;
-use crate::ui::{classed_button, icon_button, label};
+use crate::ui::{DateTimePicker, classed_button, icon_button, label};
 use adw::prelude::*;
-use chrono::{Duration as ChronoDuration, NaiveDate, Timelike};
+use chrono::{Duration as ChronoDuration, NaiveDate, NaiveTime, Timelike};
 use relm4::ComponentSender;
 
 pub(super) fn build(model: &AgendaApp, sender: ComponentSender<AgendaApp>) -> gtk::Box {
@@ -74,27 +74,25 @@ struct FormSeed {
     summary: String,
     location: String,
     description: String,
-    start_date: String,
-    start_time: String,
-    end_date: String,
-    end_time: String,
+    start_date: NaiveDate,
+    start_time: NaiveTime,
+    end_date: NaiveDate,
+    end_time: NaiveTime,
     all_day: bool,
 }
 
 impl FormSeed {
     fn new(selected_day: Option<NaiveDate>, timezone: Option<&str>) -> Self {
-        let (today, now) = now_parts_for_timezone(timezone);
-        let start_date = selected_day.unwrap_or(today);
-        let start_time = now.with_second(0).unwrap_or(now);
+        let (start_date, start_time) = default_start(selected_day, timezone);
         let end = start_date.and_time(start_time) + ChronoDuration::hours(1);
         Self {
             summary: String::new(),
             location: String::new(),
             description: String::new(),
-            start_date: start_date.to_string(),
-            start_time: start_time.format("%H:%M").to_string(),
-            end_date: end.date().to_string(),
-            end_time: end.time().format("%H:%M").to_string(),
+            start_date,
+            start_time,
+            end_date: end.date(),
+            end_time: end.time(),
             all_day: false,
         }
     }
@@ -108,8 +106,8 @@ impl FormSeed {
             .unwrap_or_else(|| now_parts_for_timezone(timezone).0);
         let start_time = start
             .and_then(|(_, time)| time)
-            .map(|time| time.format("%H:%M").to_string())
-            .unwrap_or_else(|| "09:00".to_string());
+            .unwrap_or_else(|| NaiveTime::from_hms_opt(9, 0, 0).expect("valid fallback time"));
+        let default_end = start_date.and_time(start_time) + ChronoDuration::hours(1);
         let end_date = end
             .map(|(date, time)| {
                 if time.is_none() && date > start_date {
@@ -118,23 +116,41 @@ impl FormSeed {
                     date
                 }
             })
-            .unwrap_or(start_date);
+            .unwrap_or_else(|| default_end.date());
         let end_time = end
             .and_then(|(_, time)| time)
-            .map(|time| time.format("%H:%M").to_string())
-            .unwrap_or_else(|| "10:00".to_string());
+            .unwrap_or_else(|| default_end.time());
 
         Self {
             summary: event.summary.clone(),
             location: event.location.clone(),
             description: event.description.clone(),
-            start_date: start_date.to_string(),
+            start_date,
             start_time,
-            end_date: end_date.to_string(),
+            end_date,
             end_time,
             all_day,
         }
     }
+}
+
+fn default_start(
+    selected_day: Option<NaiveDate>,
+    timezone: Option<&str>,
+) -> (NaiveDate, NaiveTime) {
+    let (today, now) = now_parts_for_timezone(timezone);
+    let date = selected_day.unwrap_or(today);
+    if date != today {
+        return (
+            date,
+            NaiveTime::from_hms_opt(9, 0, 0).expect("valid fallback time"),
+        );
+    }
+
+    let now = now.with_second(0).unwrap_or(now);
+    let minutes_to_add = 30 - (now.minute() % 30);
+    let start = date.and_time(now) + ChronoDuration::minutes(minutes_to_add as i64);
+    (start.date(), start.time())
 }
 
 fn event_detail(
@@ -310,27 +326,23 @@ fn event_form(
     all_day.set_active(seed.all_day);
     form.append(&form_row(translate(lang, "all_day"), &all_day));
 
-    let start_date = entry(&seed.start_date, "YYYY-MM-DD");
-    let start_time = entry(&seed.start_time, "HH:MM");
-    let end_date = entry(&seed.end_date, "YYYY-MM-DD");
-    let end_time = entry(&seed.end_time, "HH:MM");
-    start_time.set_sensitive(!seed.all_day);
-    end_time.set_sensitive(!seed.all_day);
+    let start = DateTimePicker::new(seed.start_date, seed.start_time);
+    let end = DateTimePicker::new(seed.end_date, seed.end_time);
+    start.set_time_sensitive(!seed.all_day);
+    end.set_time_sensitive(!seed.all_day);
 
     {
-        let start_time = start_time.clone();
-        let end_time = end_time.clone();
+        let start = start.clone();
+        let end = end.clone();
         all_day.connect_toggled(move |button| {
             let timed = !button.is_active();
-            start_time.set_sensitive(timed);
-            end_time.set_sensitive(timed);
+            start.set_time_sensitive(timed);
+            end.set_time_sensitive(timed);
         });
     }
 
-    form.append(&form_row(translate(lang, "start_date"), &start_date));
-    form.append(&form_row(translate(lang, "start_time"), &start_time));
-    form.append(&form_row(translate(lang, "end_date"), &end_date));
-    form.append(&form_row(translate(lang, "end_time"), &end_time));
+    form.append(&form_row(translate(lang, "start"), &start.container));
+    form.append(&form_row(translate(lang, "end"), &end.container));
 
     let location = entry(&seed.location, translate(lang, "location"));
     form.append(&form_row(translate(lang, "location"), &location));
@@ -372,10 +384,10 @@ fn event_form(
                 summary: summary.text().to_string(),
                 location: location.text().to_string(),
                 description: text_view_content(&description),
-                start_date: start_date.text().to_string(),
-                start_time: start_time.text().to_string(),
-                end_date: end_date.text().to_string(),
-                end_time: end_time.text().to_string(),
+                start_date: start.date_string(),
+                start_time: start.time_string(),
+                end_date: end.date_string(),
+                end_time: end.time_string(),
                 all_day: all_day.is_active(),
             };
             if let Some(key) = key.clone() {

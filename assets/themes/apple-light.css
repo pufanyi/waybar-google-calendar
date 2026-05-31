@@ -480,6 +480,58 @@ tooltip label {
   min-height: 34px;
 }
 
+.datetime-picker {
+  min-width: 0;
+}
+
+.datetime-calendar {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(60, 60, 67, 0.13);
+  border-radius: 12px;
+  color: @ink;
+  padding: 6px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.datetime-calendar:focus,
+.datetime-calendar:focus-within {
+  border-color: @accent;
+  box-shadow: 0 0 0 3px @accent_ring;
+  outline: none;
+}
+
+.datetime-time-row {
+  min-height: 32px;
+}
+
+.datetime-spin {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(60, 60, 67, 0.13);
+  border-radius: 9px;
+  color: @ink;
+  min-height: 32px;
+  min-width: 58px;
+  padding: 2px 8px;
+}
+
+.datetime-spin:focus,
+.datetime-spin:focus-within {
+  background: #ffffff;
+  border-color: @accent;
+  box-shadow: 0 0 0 3px @accent_ring;
+  outline: none;
+}
+
+.datetime-spin:disabled {
+  color: @ink_subtle;
+  opacity: 0.55;
+}
+
+.datetime-separator {
+  color: @ink_muted;
+  font-weight: 800;
+}
+
 .event-description-entry {
   min-height: 92px;
   padding: 8px 10px;

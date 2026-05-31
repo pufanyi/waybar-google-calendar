@@ -38,12 +38,16 @@ pub fn icon_button(icon_name: &str, classes: &[&str], tooltip: &str) -> gtk::But
     widget
 }
 
-pub fn drop_down() -> gtk::DropDown {
-    let widget = gtk::DropDown::from_strings(&[]);
+pub(super) fn block_scroll_changes(widget: &impl IsA<gtk::Widget>) {
     let scroll = gtk::EventControllerScroll::new(gtk::EventControllerScrollFlags::BOTH_AXES);
     scroll.set_propagation_phase(gtk::PropagationPhase::Capture);
     scroll.connect_scroll(|_, _, _| glib::Propagation::Stop);
     widget.add_controller(scroll);
+}
+
+pub fn drop_down() -> gtk::DropDown {
+    let widget = gtk::DropDown::from_strings(&[]);
+    block_scroll_changes(&widget);
     widget
 }
 

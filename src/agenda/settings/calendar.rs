@@ -1,13 +1,16 @@
 use super::layout::{SettingsIcon, field_row, section, section_title};
 use crate::i18n::{translate, week_start_name};
 use crate::storage::settings::{Language, UserSettings, WeekStart};
-use crate::ui::{drop_down, label, set_drop_down_strings};
+use crate::ui::{
+    drop_down, label, selected_time_zone, set_drop_down_strings, set_time_zone_options,
+    time_zone_drop_down,
+};
 use adw::prelude::*;
 
 pub(super) struct CalendarWidgets {
     pub(super) section: gtk::Box,
     pub(super) calendar_entry: gtk::Entry,
-    pub(super) timezone_entry: gtk::Entry,
+    pub(super) timezone_dropdown: gtk::DropDown,
     pub(super) week_start_dropdown: gtk::DropDown,
     title: gtk::Label,
     calendar_label: gtk::Label,
@@ -27,11 +30,8 @@ pub(super) fn build(settings: &UserSettings, lang: Language) -> CalendarWidgets 
     section.append(&field_row(&calendar_label, &calendar_entry));
 
     let timezone_label = label(translate(lang, "timezone"), &["field-label"], 0.0, false);
-    let timezone_entry = gtk::Entry::builder()
-        .text(settings.timezone.as_deref().unwrap_or(""))
-        .placeholder_text("Local")
-        .build();
-    section.append(&field_row(&timezone_label, &timezone_entry));
+    let timezone_dropdown = time_zone_drop_down(settings.timezone.as_deref(), lang);
+    section.append(&field_row(&timezone_label, &timezone_dropdown));
 
     let week_start_label = label(translate(lang, "week_start"), &["field-label"], 0.0, false);
     let week_start_dropdown = drop_down();
@@ -45,7 +45,7 @@ pub(super) fn build(settings: &UserSettings, lang: Language) -> CalendarWidgets 
     CalendarWidgets {
         section,
         calendar_entry,
-        timezone_entry,
+        timezone_dropdown,
         week_start_dropdown,
         title,
         calendar_label,
@@ -63,6 +63,7 @@ pub(super) fn update_text(widgets: &CalendarWidgets, lang: Language) {
     widgets
         .week_start_label
         .set_text(translate(lang, "week_start"));
+    update_timezone_options(widgets, lang);
     update_week_start_options(widgets, lang);
 }
 
@@ -70,9 +71,12 @@ pub(super) fn populate_form(widgets: &CalendarWidgets, settings: &UserSettings) 
     widgets
         .calendar_entry
         .set_text(settings.calendar.as_deref().unwrap_or(""));
-    widgets
-        .timezone_entry
-        .set_text(settings.timezone.as_deref().unwrap_or(""));
+    let lang = settings.language.unwrap_or_default();
+    set_time_zone_options(
+        &widgets.timezone_dropdown,
+        settings.timezone.as_deref(),
+        lang,
+    );
     widgets
         .week_start_dropdown
         .set_selected(week_start_index(settings.week_start.unwrap_or_default()) as u32);
@@ -87,6 +91,11 @@ pub(super) fn selected_week_start_from_dropdown(dropdown: &gtk::DropDown) -> Wee
         .get(dropdown.selected() as usize)
         .copied()
         .unwrap_or_default()
+}
+
+fn update_timezone_options(widgets: &CalendarWidgets, lang: Language) {
+    let selected = selected_time_zone(&widgets.timezone_dropdown);
+    set_time_zone_options(&widgets.timezone_dropdown, selected.as_deref(), lang);
 }
 
 fn update_week_start_options(widgets: &CalendarWidgets, lang: Language) {
