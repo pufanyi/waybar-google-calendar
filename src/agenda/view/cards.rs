@@ -1,15 +1,19 @@
-use crate::calendar::date::{format_day_label, format_time_label, parse_event_start};
+use crate::calendar::date::{
+    format_day_label_for_timezone, format_time_label_for_timezone, parse_event_start_for_timezone,
+};
 use crate::calendar::model::Event;
+use crate::i18n::translate;
+use crate::storage::settings::Language;
 use crate::ui::label;
 use adw::prelude::*;
 
-pub(super) fn event(event: &Event) -> gtk::Box {
+pub(super) fn event(event: &Event, timezone: Option<&str>, lang: Language) -> gtk::Box {
     let card = gtk::Box::new(gtk::Orientation::Vertical, 6);
     card.add_css_class("agenda-card");
 
-    card.append(&event_meta(event));
-    card.append(&event_title(event));
-    card.append(&event_details(event));
+    card.append(&event_meta(event, timezone, lang));
+    card.append(&event_title(event, lang));
+    card.append(&event_details(event, lang));
     card
 }
 
@@ -34,19 +38,19 @@ pub(super) fn message(title: &str, detail: Option<&str>, spinner: bool) -> gtk::
     card
 }
 
-fn event_meta(event: &Event) -> gtk::Box {
-    let start = parse_event_start(&event.start);
+fn event_meta(event: &Event, timezone: Option<&str>, lang: Language) -> gtk::Box {
+    let start = parse_event_start_for_timezone(&event.start, timezone);
     let meta = gtk::Box::new(gtk::Orientation::Horizontal, 10);
     meta.append(&label(
         &start
-            .map(|(date, _)| format_day_label(date))
-            .unwrap_or_else(|| "Upcoming".to_string()),
+            .map(|(date, _)| format_day_label_for_timezone(date, timezone, lang))
+            .unwrap_or_else(|| translate(lang, "upcoming").to_string()),
         &["event-date"],
         0.0,
         false,
     ));
     meta.append(&label(
-        &format_time_label(&event.start, &event.end),
+        &format_time_label_for_timezone(&event.start, &event.end, timezone, lang),
         &["event-time"],
         0.0,
         false,
@@ -54,9 +58,9 @@ fn event_meta(event: &Event) -> gtk::Box {
     meta
 }
 
-fn event_title(event: &Event) -> gtk::Label {
+fn event_title(event: &Event, lang: Language) -> gtk::Label {
     let title = if event.summary.trim().is_empty() {
-        "Untitled event"
+        translate(lang, "untitled_event")
     } else {
         event.summary.trim()
     };
@@ -65,10 +69,10 @@ fn event_title(event: &Event) -> gtk::Label {
     title_label
 }
 
-fn event_details(event: &Event) -> gtk::Box {
+fn event_details(event: &Event, lang: Language) -> gtk::Box {
     let details = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     let calendar = if event.calendar.trim().is_empty() {
-        "Calendar"
+        translate(lang, "calendar")
     } else {
         event.calendar.trim()
     };

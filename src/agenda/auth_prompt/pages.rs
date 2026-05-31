@@ -1,6 +1,8 @@
 use super::{form, widgets};
 use crate::agenda::{AgendaApp, AgendaMsg};
+use crate::i18n::translate;
 use crate::storage::paths;
+use crate::storage::settings::Language;
 use crate::ui::{classed_button, label};
 use adw::prelude::*;
 use relm4::ComponentSender;
@@ -9,19 +11,24 @@ pub(super) fn build(
     secret_present: bool,
     token_present: bool,
     authenticating: bool,
+    lang: Language,
     sender: ComponentSender<AgendaApp>,
 ) -> gtk::Box {
     if secret_present {
-        saved_client(token_present, authenticating, sender)
+        saved_client(token_present, authenticating, lang, sender)
     } else {
-        missing_client(authenticating, sender)
+        missing_client(authenticating, lang, sender)
     }
 }
 
-fn missing_client(authenticating: bool, sender: ComponentSender<AgendaApp>) -> gtk::Box {
+fn missing_client(
+    authenticating: bool,
+    lang: Language,
+    sender: ComponentSender<AgendaApp>,
+) -> gtk::Box {
     let (page, body) = shell(
-        "Create a Google OAuth client",
-        "Open the setup guide, create a Desktop app OAuth client, then paste the values here.",
+        translate(lang, "create_google_oauth_client"),
+        translate(lang, "open_setup_guide_detail"),
     );
     let note = label(
         "Guide: https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md",
@@ -30,10 +37,11 @@ fn missing_client(authenticating: bool, sender: ComponentSender<AgendaApp>) -> g
         true,
     );
     body.append(&note);
-    append_setup_actions(&body, sender.clone());
+    append_setup_actions(&body, lang, sender.clone());
     body.append(&form::credentials(
         authenticating,
-        "Save & Authenticate",
+        translate(lang, "save_authenticate"),
+        lang,
         sender,
     ));
     page
@@ -42,34 +50,36 @@ fn missing_client(authenticating: bool, sender: ComponentSender<AgendaApp>) -> g
 fn saved_client(
     token_present: bool,
     authenticating: bool,
+    lang: Language,
     sender: ComponentSender<AgendaApp>,
 ) -> gtk::Box {
     let (page, body) = shell(
-        "Authorize calendar access",
-        "The OAuth client is saved. Start browser authorization to load your calendar.",
+        translate(lang, "authorize_calendar_access"),
+        translate(lang, "oauth_client_saved_browser"),
     );
 
     body.append(&widgets::path_summary(
-        "OAuth client saved at",
+        translate(lang, "oauth_client_saved_at"),
         &paths::client_secret_file(),
     ));
-    let replace = gtk::Expander::new(Some("Replace OAuth client"));
+    let replace = gtk::Expander::new(Some(translate(lang, "replace_oauth_client")));
     replace.add_css_class("auth-expander");
     replace.set_child(Some(&form::credentials(
         authenticating,
-        "Replace & Authenticate",
+        translate(lang, "replace_authenticate"),
+        lang,
         sender.clone(),
     )));
     body.append(&replace);
 
     if token_present {
         body.append(&widgets::path_summary(
-            "Browser token saved at",
+            translate(lang, "browser_token_saved_at"),
             &paths::oauth_token_file(),
         ));
     }
 
-    append_start_auth_action(&body, token_present, authenticating, sender);
+    append_start_auth_action(&body, token_present, authenticating, lang, sender);
     page
 }
 
@@ -90,17 +100,17 @@ fn shell(title: &str, detail: &str) -> (gtk::Box, gtk::Box) {
     (page, body)
 }
 
-fn append_setup_actions(body: &gtk::Box, sender: ComponentSender<AgendaApp>) {
+fn append_setup_actions(body: &gtk::Box, lang: Language, sender: ComponentSender<AgendaApp>) {
     let actions = widgets::action_row();
-    append_setup_guide_button(&actions, sender.clone());
-    let open_cloud = classed_button("Google Cloud", &["action-button"]);
+    append_setup_guide_button(&actions, lang, sender.clone());
+    let open_cloud = classed_button(translate(lang, "google_cloud"), &["action-button"]);
     {
         let sender = sender.clone();
         open_cloud.connect_clicked(move |_| sender.input(AgendaMsg::OpenGoogleCloud));
     }
     actions.append(&open_cloud);
 
-    let open_api = classed_button("Calendar API", &["action-button"]);
+    let open_api = classed_button(translate(lang, "calendar_api"), &["action-button"]);
     {
         let sender = sender.clone();
         open_api.connect_clicked(move |_| sender.input(AgendaMsg::OpenCalendarApi));
@@ -110,8 +120,12 @@ fn append_setup_actions(body: &gtk::Box, sender: ComponentSender<AgendaApp>) {
     body.append(&actions);
 }
 
-fn append_setup_guide_button(actions: &gtk::Box, sender: ComponentSender<AgendaApp>) {
-    let setup_guide = classed_button("Setup Guide", &["action-button"]);
+fn append_setup_guide_button(
+    actions: &gtk::Box,
+    lang: Language,
+    sender: ComponentSender<AgendaApp>,
+) {
+    let setup_guide = classed_button(translate(lang, "setup_guide"), &["action-button"]);
     {
         let sender = sender.clone();
         setup_guide.connect_clicked(move |_| sender.input(AgendaMsg::OpenSetupGuide));
@@ -123,16 +137,17 @@ fn append_start_auth_action(
     body: &gtk::Box,
     token_present: bool,
     authenticating: bool,
+    lang: Language,
     sender: ComponentSender<AgendaApp>,
 ) {
     let actions = widgets::action_row();
     let start_auth = classed_button(
         if authenticating {
-            "Authenticating"
+            translate(lang, "authenticating")
         } else if token_present {
-            "Re-authenticate"
+            translate(lang, "reauthenticate")
         } else {
-            "Start Authentication"
+            translate(lang, "start_authentication")
         },
         &["action-button"],
     );

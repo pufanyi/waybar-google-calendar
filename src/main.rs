@@ -3,6 +3,7 @@ mod app;
 mod auth_ui;
 mod calendar;
 mod google;
+mod i18n;
 mod month;
 mod storage;
 #[cfg(test)]

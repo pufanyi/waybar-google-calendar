@@ -1,13 +1,23 @@
 use crate::calendar::model::{DateRange, Event};
+use crate::i18n::translate;
+use crate::storage::settings::Language;
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local, NaiveDate, NaiveTime};
+use chrono_tz::Tz;
 use std::collections::BTreeSet;
 
-pub fn parse_event_start(raw: &str) -> Option<(NaiveDate, Option<NaiveTime>)> {
+pub fn parse_event_start_for_timezone(
+    raw: &str,
+    timezone: Option<&str>,
+) -> Option<(NaiveDate, Option<NaiveTime>)> {
     if raw.contains('T') {
-        DateTime::parse_from_rfc3339(raw)
-            .ok()
-            .map(|dt| dt.with_timezone(&Local))
-            .map(|dt| (dt.date_naive(), Some(dt.time())))
+        let dt = DateTime::parse_from_rfc3339(raw).ok()?;
+        if let Some(tz) = timezone.and_then(|timezone| timezone.parse::<Tz>().ok()) {
+            let dt = dt.with_timezone(&tz);
+            Some((dt.date_naive(), Some(dt.time())))
+        } else {
+            let dt = dt.with_timezone(&Local);
+            Some((dt.date_naive(), Some(dt.time())))
+        }
     } else {
         NaiveDate::parse_from_str(raw, "%Y-%m-%d")
             .ok()
@@ -15,25 +25,34 @@ pub fn parse_event_start(raw: &str) -> Option<(NaiveDate, Option<NaiveTime>)> {
     }
 }
 
-pub fn format_day_label(date: NaiveDate) -> String {
-    let today = Local::now().date_naive();
+pub fn format_day_label_for_timezone(
+    date: NaiveDate,
+    timezone: Option<&str>,
+    lang: Language,
+) -> String {
+    let today = today_for_timezone(timezone);
     if date == today {
-        "Today".to_string()
+        translate(lang, "today").to_string()
     } else if date == today + ChronoDuration::days(1) {
-        "Tomorrow".to_string()
+        translate(lang, "tomorrow").to_string()
     } else {
         date.format("%a %b %-d").to_string()
     }
 }
 
-pub fn format_time_label(start: &str, end: &str) -> String {
-    let Some((_, start_time)) = parse_event_start(start) else {
-        return "Time unavailable".to_string();
+pub fn format_time_label_for_timezone(
+    start: &str,
+    end: &str,
+    timezone: Option<&str>,
+    lang: Language,
+) -> String {
+    let Some((_, start_time)) = parse_event_start_for_timezone(start, timezone) else {
+        return translate(lang, "time_unavailable").to_string();
     };
     let Some(start_time) = start_time else {
-        return "All day".to_string();
+        return translate(lang, "all_day").to_string();
     };
-    let end_time = parse_event_start(end)
+    let end_time = parse_event_start_for_timezone(end, timezone)
         .and_then(|(_, time)| time)
         .unwrap_or(start_time);
     format!(
@@ -43,12 +62,23 @@ pub fn format_time_label(start: &str, end: &str) -> String {
     )
 }
 
-pub fn event_days(events: &[Event]) -> BTreeSet<NaiveDate> {
-    events.iter().filter_map(event_date).collect()
+pub fn event_days_for_timezone(events: &[Event], timezone: Option<&str>) -> BTreeSet<NaiveDate> {
+    events
+        .iter()
+        .filter_map(|event| event_date_for_timezone(event, timezone))
+        .collect()
 }
 
-pub fn event_date(event: &Event) -> Option<NaiveDate> {
-    parse_event_start(&event.start).map(|(date, _)| date)
+pub fn event_date_for_timezone(event: &Event, timezone: Option<&str>) -> Option<NaiveDate> {
+    parse_event_start_for_timezone(&event.start, timezone).map(|(date, _)| date)
+}
+
+pub fn today_for_timezone(timezone: Option<&str>) -> NaiveDate {
+    if let Some(tz) = timezone.and_then(|timezone| timezone.parse::<Tz>().ok()) {
+        Local::now().with_timezone(&tz).date_naive()
+    } else {
+        Local::now().date_naive()
+    }
 }
 
 pub fn month_dates(year: i32, month: u32) -> Vec<NaiveDate> {
@@ -76,38 +106,32 @@ pub fn shift_month(year: i32, month: u32, delta: i32) -> (i32, u32) {
     (shifted_year, shifted_month)
 }
 
-pub fn month_name(month: u32) -> &'static str {
-    match month {
-        1 => "January",
-        2 => "February",
-        3 => "March",
-        4 => "April",
-        5 => "May",
-        6 => "June",
-        7 => "July",
-        8 => "August",
-        9 => "September",
-        10 => "October",
-        11 => "November",
-        12 => "December",
-        _ => "Calendar",
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn parses_all_day_event_start() {
-        let parsed = parse_event_start("2026-05-28").expect("date should parse");
+        let parsed = parse_event_start_for_timezone("2026-05-28", None).expect("date should parse");
         assert_eq!(parsed.0, NaiveDate::from_ymd_opt(2026, 5, 28).unwrap());
         assert_eq!(parsed.1, None);
     }
 
     #[test]
+    fn parses_timed_event_in_requested_timezone() {
+        let parsed = parse_event_start_for_timezone("2026-05-30T23:30:00Z", Some("Asia/Singapore"))
+            .expect("date time should parse");
+
+        assert_eq!(parsed.0, NaiveDate::from_ymd_opt(2026, 5, 31).unwrap());
+        assert_eq!(parsed.1, Some(NaiveTime::from_hms_opt(7, 30, 0).unwrap()));
+    }
+
+    #[test]
     fn formats_all_day_time_label() {
-        assert_eq!(format_time_label("2026-05-28", "2026-05-29"), "All day");
+        assert_eq!(
+            format_time_label_for_timezone("2026-05-28", "2026-05-29", None, Language::English),
+            "All day"
+        );
     }
 
     #[test]

@@ -1,13 +1,25 @@
+use crate::i18n::translate;
 use crate::storage::paths;
+use crate::storage::settings::Language;
 use crate::ui::label;
 use adw::prelude::*;
 
-pub(super) fn current(error: &str, secret_present: bool, token_present: bool) -> gtk::Box {
+pub(super) fn current(
+    error: &str,
+    secret_present: bool,
+    token_present: bool,
+    lang: Language,
+) -> gtk::Box {
     let status = gtk::Box::new(gtk::Orientation::Vertical, 3);
     status.add_css_class("auth-current-status");
-    status.append(&label("Current status", &["field-label"], 0.0, false));
     status.append(&label(
-        &friendly_message(error, secret_present, token_present),
+        translate(lang, "current_status"),
+        &["field-label"],
+        0.0,
+        false,
+    ));
+    status.append(&label(
+        &friendly_message(error, secret_present, token_present, lang),
         &["muted"],
         0.0,
         true,
@@ -25,7 +37,12 @@ pub(super) fn should_show_prompt(error: &str) -> bool {
     needs_auth_action(error) || setup_incomplete()
 }
 
-fn friendly_message(error: &str, secret_present: bool, token_present: bool) -> String {
+fn friendly_message(
+    error: &str,
+    secret_present: bool,
+    token_present: bool,
+    lang: Language,
+) -> String {
     let error = error.trim();
     let lower = error.to_ascii_lowercase();
     if lower.contains("opened")
@@ -36,24 +53,21 @@ fn friendly_message(error: &str, secret_present: bool, token_present: bool) -> S
         return error.to_string();
     }
     if lower.contains("missing google oauth client secret") {
-        return "No OAuth client is saved yet. Follow the pages below; this is a one-time setup."
-            .to_string();
+        return translate(lang, "no_oauth_client_saved").to_string();
     }
     if lower.contains("not authenticated") {
-        return "OAuth client is saved. Finish browser authorization on the last page.".to_string();
+        return translate(lang, "oauth_client_saved_authorize").to_string();
     }
     if !error.is_empty() {
         return error.to_string();
     }
     if !secret_present {
-        return "No OAuth client is saved yet. Follow the pages below; this is a one-time setup."
-            .to_string();
+        return translate(lang, "no_oauth_client_saved").to_string();
     }
     if !token_present {
-        return "OAuth client is saved. Finish browser authorization on the last page.".to_string();
+        return translate(lang, "oauth_client_saved_authorize").to_string();
     }
-    "Google Calendar credentials are saved. Refresh or re-authenticate if events still do not load."
-        .to_string()
+    translate(lang, "google_calendar_credentials_saved").to_string()
 }
 
 fn needs_auth_action(error: &str) -> bool {

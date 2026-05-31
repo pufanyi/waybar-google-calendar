@@ -57,6 +57,7 @@ The source tree is grouped by responsibility:
 - `src/calendar/`: shared calendar/date model, date helpers, and navigation
   view state.
 - `src/google/`: Google OAuth and Calendar API access.
+- `src/i18n.rs`: localized UI text lookup.
 - `src/month/`: standalone local month calendar popup.
 - `src/storage/`: cache and filesystem paths.
 - `src/ui/`: shared GTK helpers and theme loading.
@@ -120,6 +121,7 @@ All GUI settings are saved persistently to a local JSON file:
 ```
 
 These saved settings are loaded automatically upon startup and act as the fallback for all CLI commands unless overridden by explicit environment variables or CLI arguments.
+If this JSON cannot be read or parsed, the app reports the error instead of silently replacing it with defaults.
 
 ## Waybar
 

@@ -7,12 +7,16 @@ use crate::{agenda, auth_ui, month, ui};
 use adw::prelude::*;
 use gtk::gio;
 use relm4::RelmApp;
+use single_instance::InstanceStatus;
 use std::fs;
 
 const APP_ID: &str = "io.github.pufanyi.waybar_google_calendar";
 
 pub fn run(config: Config) -> Result<(), String> {
-    single_instance::toggle_existing_instance(config.mode)?;
+    if single_instance::toggle_existing_instance(config.mode)? == InstanceStatus::TerminatedExisting
+    {
+        return Ok(());
+    }
     let css = ui::theme::load_css(config.theme_path.as_deref())?;
 
     let pid_file = paths::pid_file(config.mode);

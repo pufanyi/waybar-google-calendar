@@ -1,42 +1,45 @@
-use crate::calendar::date::month_name;
 use crate::calendar::model::{AgendaState, DateRange};
+use crate::i18n::{month_name, translate};
+use crate::storage::settings::Language;
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Local};
 
-pub(super) fn agenda(state: &AgendaState) -> String {
+pub(super) fn agenda(state: &AgendaState, lang: Language) -> String {
     if state.loading && state.events.is_empty() {
-        return "Loading".to_string();
+        return translate(lang, "loading").to_string();
     }
     if let Some(error) = &state.error {
         if state.events.is_empty() {
-            return "Refresh failed".to_string();
+            return translate(lang, "refresh_failed").to_string();
         }
         return format!(
-            "{}; refresh failed",
-            cache_status(state.fetched_at, "Cached", Some(error))
+            "{}; {}",
+            cache_status(state.fetched_at, lang, Some(error)),
+            translate(lang, "refresh_failed").to_ascii_lowercase()
         );
     }
     if state.loading {
         return format!(
-            "{}; refreshing",
-            cache_status(state.fetched_at, "Cached", None)
+            "{}; {}",
+            cache_status(state.fetched_at, lang, None),
+            translate(lang, "refreshing").to_ascii_lowercase()
         );
     }
     if state.cached {
-        return cache_status(state.fetched_at, "Cached", None);
+        return cache_status(state.fetched_at, lang, None);
     }
     state
         .fetched_at
-        .map(|time| format!("Updated {}", time.format("%H:%M")))
+        .map(|time| format!("{} {}", translate(lang, "updated"), time.format("%H:%M")))
         .unwrap_or_else(|| Local::now().format("%a, %b %-d  %-I:%M %p").to_string())
 }
 
-pub(super) fn range(range: DateRange) -> String {
+pub(super) fn range(range: DateRange, lang: Language) -> String {
     let end = range.end_exclusive - ChronoDuration::days(1);
     if range.start.year() == end.year() {
         if range.start.month() == end.month() {
             return format!(
                 "{} {}-{}",
-                month_name(range.start.month()),
+                month_name(lang, range.start.month()),
                 range.start.day(),
                 end.day()
             );
@@ -56,16 +59,33 @@ pub(super) fn range(range: DateRange) -> String {
     )
 }
 
-fn cache_status(fetched_at: Option<DateTime<Local>>, prefix: &str, suffix: Option<&str>) -> String {
+fn cache_status(
+    fetched_at: Option<DateTime<Local>>,
+    lang: Language,
+    suffix: Option<&str>,
+) -> String {
+    let prefix = translate(lang, "cached");
     let base = match fetched_at {
         Some(time) => {
             let age = (Local::now() - time).num_seconds().max(0);
             if age < 60 {
-                format!("{prefix} just now")
+                if lang == Language::Chinese {
+                    format!("{prefix}刚刚")
+                } else {
+                    format!("{prefix} just now")
+                }
             } else if age < 3600 {
-                format!("{prefix} {} min ago", age / 60)
+                if lang == Language::Chinese {
+                    format!("{prefix} {} 分钟前", age / 60)
+                } else {
+                    format!("{prefix} {} min ago", age / 60)
+                }
             } else {
-                format!("{prefix} {} h ago", age / 3600)
+                if lang == Language::Chinese {
+                    format!("{prefix} {} 小时前", age / 3600)
+                } else {
+                    format!("{prefix} {} h ago", age / 3600)
+                }
             }
         }
         None => prefix.to_string(),

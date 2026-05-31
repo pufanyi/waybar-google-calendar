@@ -1968,6 +1968,7 @@ dependencies = [
  "chrono-tz",
  "gtk4",
  "libadwaita",
+ "libc",
  "percent-encoding",
  "relm4",
  "reqwest",

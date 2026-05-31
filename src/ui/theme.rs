@@ -1,9 +1,14 @@
 use crate::storage::paths;
 use gtk::gdk;
+use std::cell::RefCell;
 use std::fs;
 use std::path::Path;
 
 const BUILTIN_CSS: &str = include_str!("../../assets/themes/apple-light.css");
+
+thread_local! {
+    static ACTIVE_PROVIDER: RefCell<Option<gtk::CssProvider>> = const { RefCell::new(None) };
+}
 
 pub fn builtin_css() -> &'static str {
     BUILTIN_CSS
@@ -29,11 +34,18 @@ pub fn apply_css(css: &str) {
     let provider = gtk::CssProvider::new();
     provider.load_from_string(css);
     if let Some(display) = gdk::Display::default() {
-        gtk::style_context_add_provider_for_display(
-            &display,
-            &provider,
-            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-        );
+        ACTIVE_PROVIDER.with(|active_provider| {
+            let mut active_provider = active_provider.borrow_mut();
+            if let Some(provider) = active_provider.take() {
+                gtk::style_context_remove_provider_for_display(&display, &provider);
+            }
+            gtk::style_context_add_provider_for_display(
+                &display,
+                &provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
+            *active_provider = Some(provider);
+        });
     }
 }
 

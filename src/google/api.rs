@@ -2,7 +2,7 @@ use super::auth::access_token;
 use super::transport::request_json;
 use super::types::{CalendarInfo, CalendarListResponse, EventsListResponse};
 use super::{CALENDAR_API, fetch_timeout, runtime};
-use crate::calendar::date::parse_event_start;
+use crate::calendar::date::parse_event_start_for_timezone;
 use crate::calendar::model::{AgendaQuery, DateRange, Event, FETCH_TIMEOUT_SECONDS};
 use chrono::{Datelike, Local, NaiveDate, TimeZone};
 use chrono_tz::Tz;
@@ -42,7 +42,9 @@ async fn fetch_events_async(query: &AgendaQuery, range: DateRange) -> Result<Vec
         return Err(failures.join("; "));
     }
 
-    events.sort_by_key(|event| parse_event_start(&event.start));
+    events.sort_by_key(|event| {
+        parse_event_start_for_timezone(&event.start, query.timezone.as_deref())
+    });
     Ok(events)
 }
 
@@ -59,6 +61,12 @@ async fn fetch_calendars(
     )
     .await?;
 
+    let filter = query
+        .calendar
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    let filter_lower = filter.map(str::to_ascii_lowercase);
     let calendars = payload
         .items
         .into_iter()
@@ -69,13 +77,24 @@ async fn fetch_calendars(
             calendar
         })
         .filter(|calendar| {
-            query
-                .calendar
-                .as_deref()
-                .map(|filter| calendar.id == filter || calendar.summary.contains(filter))
+            filter
+                .zip(filter_lower.as_deref())
+                .map(|(filter, filter_lower)| {
+                    calendar.id == filter
+                        || calendar.summary.to_ascii_lowercase().contains(filter_lower)
+                })
                 .unwrap_or(true)
         })
-        .collect();
+        .collect::<Vec<_>>();
+
+    if calendars.is_empty()
+        && let Some(filter) = filter
+    {
+        return Err(format!(
+            "No readable Google Calendar matched \"{filter}\". Check the calendar name or ID."
+        ));
+    }
+
     Ok(calendars)
 }
 

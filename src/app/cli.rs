@@ -12,7 +12,17 @@ pub enum CliCommand {
 }
 
 pub fn parse_args(args: Vec<String>) -> Result<CliCommand, String> {
-    parse_args_with_sources(args, read_settings(), env_string, env_path)
+    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+        return Ok(CliCommand::Help);
+    }
+    if args.first().is_some_and(|arg| arg == "auth") {
+        return Ok(CliCommand::Auth);
+    }
+    if args.first().is_some_and(|arg| arg == "print-theme") {
+        return Ok(CliCommand::PrintTheme);
+    }
+
+    parse_args_with_sources(args, read_settings()?, env_string, env_path)
 }
 
 fn parse_args_with_sources<F, G>(

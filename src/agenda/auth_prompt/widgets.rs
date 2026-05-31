@@ -1,4 +1,6 @@
 use crate::agenda::{AgendaApp, AgendaMsg};
+use crate::i18n::translate;
+use crate::storage::settings::Language;
 use crate::ui::{classed_button, label};
 use adw::prelude::*;
 use relm4::ComponentSender;
@@ -6,17 +8,18 @@ use std::path::Path;
 
 pub(super) fn utility_actions(
     authenticating: bool,
+    lang: Language,
     sender: ComponentSender<AgendaApp>,
 ) -> gtk::Expander {
-    let expander = gtk::Expander::new(Some("Advanced"));
+    let expander = gtk::Expander::new(Some(translate(lang, "advanced")));
     expander.add_css_class("auth-expander");
 
     let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     actions.add_css_class("auth-helper-actions");
 
-    let refresh = classed_button("Refresh Status", &["action-button"]);
-    let open_config = classed_button("Config Folder", &["action-button"]);
-    let open_token = classed_button("Token Folder", &["action-button"]);
+    let refresh = classed_button(translate(lang, "refresh_status"), &["action-button"]);
+    let open_config = classed_button(translate(lang, "config_folder"), &["action-button"]);
+    let open_token = classed_button(translate(lang, "token_folder"), &["action-button"]);
 
     refresh.set_sensitive(!authenticating);
 

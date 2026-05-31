@@ -4,7 +4,8 @@ mod list;
 mod status;
 
 use super::{AgendaApp, AgendaWidgets, auth_prompt};
-use crate::calendar::date::event_days;
+use crate::calendar::date::event_days_for_timezone;
+use crate::i18n::translate;
 use crate::ui::clear_box;
 use adw::prelude::*;
 use relm4::ComponentSender;
@@ -26,7 +27,7 @@ pub(super) fn render(
     let calendar_event_days = if focus_auth_prompt {
         BTreeSet::new()
     } else {
-        event_days(&model.state.events)
+        event_days_for_timezone(&model.state.events, model.query.timezone.as_deref())
     };
 
     widgets.content.append(&calendar::build(
@@ -39,32 +40,34 @@ pub(super) fn render(
         &model.state,
         model.selected_day,
         model.authenticating,
+        model.language(),
         sender,
     ));
     update_topbar(model, widgets);
 }
 
 fn update_topbar(model: &AgendaApp, widgets: &AgendaWidgets) {
+    let lang = model.language();
     widgets
         .refresh
         .set_sensitive(!model.settings_open && !model.state.loading && !model.authenticating);
     widgets
         .refresh
         .set_tooltip_text(Some(if model.authenticating {
-            "Authenticating"
+            translate(lang, "authenticating")
         } else if model.settings_open {
-            "Settings open"
+            translate(lang, "settings_open")
         } else if model.state.loading {
-            "Refreshing"
+            translate(lang, "refreshing")
         } else {
-            "Refresh"
+            translate(lang, "refresh")
         }));
     let status = if model.settings_open {
-        "Settings".to_string()
+        translate(lang, "settings").to_string()
     } else if model.authenticating {
-        "Authenticating".to_string()
+        translate(lang, "authenticating").to_string()
     } else {
-        status::agenda(&model.state)
+        status::agenda(&model.state, lang)
     };
     widgets.status_label.set_text(&status);
 }

@@ -33,10 +33,11 @@ pub fn write_cache(
     range: DateRange,
     events: &[Event],
     fetched_at: DateTime<Local>,
-) {
+) -> Result<(), String> {
     let file = paths::cache_file(&cache_key(query, range));
     if let Some(parent) = file.parent() {
-        let _ = fs::create_dir_all(parent);
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("Could not create cache folder {}: {err}", parent.display()))?;
     }
     let payload = CachePayload {
         version: CACHE_VERSION,
@@ -47,8 +48,50 @@ pub fn write_cache(
         fetched_at: fetched_at.to_rfc3339(),
         events: events.to_vec(),
     };
-    if let Ok(json) = serde_json::to_string(&payload) {
-        let _ = fs::write(file, json);
+    let json = serde_json::to_string(&payload)
+        .map_err(|err| format!("Could not serialize agenda cache: {err}"))?;
+    fs::write(&file, json).map_err(|err| format!("Could not write cache {}: {err}", file.display()))
+}
+
+pub fn clear_agenda_cache() -> Result<usize, String> {
+    let dir = paths::cache_dir();
+    if !dir.exists() {
+        return Ok(0);
+    }
+
+    let entries = fs::read_dir(&dir)
+        .map_err(|err| format!("Could not read cache folder {}: {err}", dir.display()))?;
+    let mut removed = 0;
+    let mut errors = Vec::new();
+
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(err) => {
+                errors.push(format!("Could not read cache entry: {err}"));
+                continue;
+            }
+        };
+        let path = entry.path();
+        let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+        if !name.starts_with("agenda-") || !name.ends_with(".json") {
+            continue;
+        }
+        match fs::remove_file(&path) {
+            Ok(()) => removed += 1,
+            Err(err) => errors.push(format!("{}: {err}", path.display())),
+        }
+    }
+
+    if errors.is_empty() {
+        Ok(removed)
+    } else {
+        Err(format!(
+            "Could not clear some cache files: {}",
+            errors.join("; ")
+        ))
     }
 }
 
@@ -192,7 +235,7 @@ mod tests {
         }];
 
         let fetched_at = Local::now();
-        write_cache(&query, range, &events, fetched_at);
+        write_cache(&query, range, &events, fetched_at).unwrap();
 
         let cached = read_cache(&query, range).expect("Should successfully read cache");
         assert_eq!(cached.events.len(), 1);
@@ -222,5 +265,20 @@ mod tests {
             "hello-world-domain-com"
         );
         assert_eq!(sanitize_key_part("---test---"), "test");
+    }
+
+    #[test]
+    fn clear_agenda_cache_only_removes_agenda_json_files() {
+        let _guard = EnvGuard::new("clear");
+        let dir = paths::cache_dir();
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("agenda-one.json"), "{}").unwrap();
+        fs::write(dir.join("agenda-two.json"), "{}").unwrap();
+        fs::write(dir.join("other.json"), "{}").unwrap();
+
+        assert_eq!(clear_agenda_cache().unwrap(), 2);
+        assert!(!dir.join("agenda-one.json").exists());
+        assert!(!dir.join("agenda-two.json").exists());
+        assert!(dir.join("other.json").exists());
     }
 }

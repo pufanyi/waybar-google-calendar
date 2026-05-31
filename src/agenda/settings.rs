@@ -1,6 +1,7 @@
 use super::{AgendaApp, AgendaMsg};
+use crate::i18n::translate;
 use crate::storage::paths;
-use crate::storage::settings::{Language, UserSettings, translate};
+use crate::storage::settings::{Language, UserSettings};
 use crate::ui::{classed_button, label};
 use adw::prelude::*;
 use relm4::ComponentSender;

@@ -3,7 +3,7 @@ mod auth;
 mod transport;
 mod types;
 
-use std::env;
+use std::{env, sync::OnceLock};
 
 const CALENDAR_SCOPE: &str = "https://www.googleapis.com/auth/calendar.readonly";
 const CALENDAR_API: &str = "https://www.googleapis.com/calendar/v3";
@@ -12,11 +12,18 @@ pub use api::fetch_events;
 pub use auth::{auth_calendar, save_client_secret};
 pub use transport::open_external_uri;
 
-fn runtime() -> Result<tokio::runtime::Runtime, String> {
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .map_err(|err| format!("Could not start async runtime: {err}"))
+fn runtime() -> Result<&'static tokio::runtime::Runtime, String> {
+    static RUNTIME: OnceLock<Result<tokio::runtime::Runtime, String>> = OnceLock::new();
+
+    RUNTIME
+        .get_or_init(|| {
+            tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .map_err(|err| format!("Could not start async runtime: {err}"))
+        })
+        .as_ref()
+        .map_err(Clone::clone)
 }
 
 fn fetch_timeout(default: u64) -> u64 {

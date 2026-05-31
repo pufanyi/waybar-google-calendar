@@ -4,18 +4,17 @@ mod controller;
 mod settings;
 mod view;
 
-use crate::calendar::date::visible_month_range;
+use crate::calendar::date::{today_for_timezone, visible_month_range};
 use crate::calendar::model::{AgendaQuery, AgendaResult, AgendaState};
 use crate::calendar::view::CalendarViewMode;
+use crate::i18n::translate;
 use crate::storage::cache::{cache_is_fresh, read_cache};
-use crate::storage::settings::{Language, UserSettings, read_settings, translate};
+use crate::storage::settings::{Language, UserSettings, read_settings};
 use crate::ui::{icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
 use gtk::gdk;
 use relm4::{Component, ComponentParts, ComponentSender};
-use std::cell::Cell;
-use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct AgendaInit {
@@ -62,6 +61,7 @@ pub enum AgendaMsg {
     OpenSettings,
     CloseSettings,
     Close,
+    EscapePressed,
     SaveSettings {
         calendar: String,
         timezone: String,
@@ -85,7 +85,6 @@ pub struct AgendaWidgets {
     settings_button: gtk::Button,
     title_label: gtk::Label,
     settings: settings::SettingsWidgets,
-    settings_open_flag: Rc<Cell<bool>>,
 }
 
 impl Component for AgendaApp {
@@ -115,7 +114,10 @@ impl Component for AgendaApp {
         let root_box = gtk::Box::new(gtk::Orientation::Vertical, 12);
         root_box.add_css_class("panel");
 
-        let user_settings = read_settings();
+        let (user_settings, settings_msg) = match read_settings() {
+            Ok(settings) => (settings, None),
+            Err(error) => (UserSettings::default(), Some(error)),
+        };
         let lang = user_settings.language.unwrap_or_default();
 
         let topbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -176,18 +178,12 @@ impl Component for AgendaApp {
         root_box.append(&content);
         root.set_content(Some(&root_box));
 
-        let settings_open_flag = Rc::new(Cell::new(false));
         let key_controller = gtk::EventControllerKey::new();
         {
             let sender = sender.clone();
-            let settings_open_flag = settings_open_flag.clone();
             key_controller.connect_key_pressed(move |_, key, _, _| {
                 if key == gdk::Key::Escape {
-                    if settings_open_flag.get() {
-                        sender.input(AgendaMsg::CloseSettings);
-                    } else {
-                        sender.input(AgendaMsg::Close);
-                    }
+                    sender.input(AgendaMsg::EscapePressed);
                     gtk::glib::Propagation::Stop
                 } else {
                     gtk::glib::Propagation::Proceed
@@ -196,7 +192,7 @@ impl Component for AgendaApp {
         }
         root.add_controller(key_controller);
 
-        let today = Local::now().date_naive();
+        let today = today_for_timezone(init.query.timezone.as_deref());
         let initial_range = visible_month_range(today.year(), today.month());
         let initial_cache = read_cache(&init.query, initial_range);
         let state = match &initial_cache {
@@ -229,7 +225,7 @@ impl Component for AgendaApp {
             authenticating: false,
             user_settings: user_settings.clone(),
             settings_form: user_settings,
-            settings_msg: None,
+            settings_msg,
             settings_open: false,
         };
 
@@ -240,7 +236,6 @@ impl Component for AgendaApp {
             settings_button,
             title_label,
             settings: settings_widgets,
-            settings_open_flag,
         };
         view::render(&model, &mut widgets, sender.clone());
 
@@ -258,6 +253,10 @@ impl Component for AgendaApp {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AgendaMsg::Close => root.close(),
+            AgendaMsg::EscapePressed if self.settings_open => {
+                self.handle_input(AgendaMsg::CloseSettings, sender);
+            }
+            AgendaMsg::EscapePressed => root.close(),
             message => self.handle_input(message, sender),
         }
     }
@@ -287,7 +286,6 @@ impl Component for AgendaApp {
             .settings_button
             .set_tooltip_text(Some(translate(lang, "settings")));
         widgets.settings_button.set_sensitive(!self.settings_open);
-        widgets.settings_open_flag.set(self.settings_open);
 
         settings::update_text(&widgets.settings, lang);
         settings::update_state(
@@ -306,7 +304,8 @@ impl Component for AgendaApp {
         root: &Self::Root,
     ) {
         let should_sync_settings = matches!(message, AgendaMsg::OpenSettings);
-        let should_close = matches!(message, AgendaMsg::Close);
+        let should_close = matches!(message, AgendaMsg::Close)
+            || matches!(message, AgendaMsg::EscapePressed) && !self.settings_open;
 
         self.update(message, sender.clone(), root);
         if should_close {
@@ -317,5 +316,11 @@ impl Component for AgendaApp {
         if should_sync_settings {
             settings::populate_form(&widgets.settings, &self.settings_form);
         }
+    }
+}
+
+impl AgendaApp {
+    pub(super) fn language(&self) -> Language {
+        self.user_settings.language.unwrap_or_default()
     }
 }

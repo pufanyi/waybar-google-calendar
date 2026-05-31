@@ -1,12 +1,14 @@
 use super::{AgendaApp, AgendaCommandOutput, AgendaMsg, auth_prompt};
-use crate::calendar::date::{shift_month, visible_month_range};
+use crate::calendar::date::{shift_month, today_for_timezone, visible_month_range};
 use crate::calendar::model::{AgendaResult, DateRange};
 use crate::calendar::view::{CalendarViewMode, YEAR_PAGE_STEP};
 use crate::google::{self, fetch_events};
-use crate::storage::cache::{cache_is_fresh, read_cache, write_cache};
+use crate::i18n::translate;
+use crate::storage::cache::{cache_is_fresh, clear_agenda_cache, read_cache, write_cache};
 use crate::storage::paths;
 use chrono::{Datelike, Local};
 use relm4::ComponentSender;
+use std::io;
 
 impl AgendaApp {
     pub(super) fn current_range(&self) -> DateRange {
@@ -102,41 +104,53 @@ impl AgendaApp {
                 client_secret,
             } => self.save_and_start_auth(client_id, client_secret, sender),
             AgendaMsg::OpenConfigDir => {
+                let lang = self.language();
                 self.state.error = Some(
                     auth_prompt::open_dir(&paths::config_dir())
-                        .map(|_| "Config folder opened.".to_string())
+                        .map(|_| translate(lang, "config_folder_opened").to_string())
                         .unwrap_or_else(|error| error),
                 );
             }
             AgendaMsg::OpenTokenDir => {
+                let lang = self.language();
                 self.state.error = Some(
                     auth_prompt::open_dir(&paths::data_dir())
-                        .map(|_| "Token folder opened.".to_string())
+                        .map(|_| translate(lang, "token_folder_opened").to_string())
                         .unwrap_or_else(|error| error),
                 );
             }
             AgendaMsg::OpenSetupGuide => {
+                let lang = self.language();
                 self.state.error = Some(
                     auth_prompt::open_setup_guide()
-                        .map(|_| "Setup guide opened.".to_string())
+                        .map(|_| translate(lang, "setup_guide_opened").to_string())
                         .unwrap_or_else(|error| error),
                 );
             }
             AgendaMsg::OpenGoogleCloud => {
+                let lang = self.language();
                 self.open_external(
                     auth_prompt::GOOGLE_CLOUD_CREDENTIALS_URL,
-                    "Google Cloud opened in your browser.",
+                    translate(lang, "google_cloud_opened"),
                 );
             }
             AgendaMsg::OpenCalendarApi => {
+                let lang = self.language();
                 self.open_external(
                     auth_prompt::GOOGLE_CALENDAR_API_URL,
-                    "Google Calendar API page opened in your browser.",
+                    translate(lang, "google_calendar_api_opened"),
                 );
             }
             AgendaMsg::OpenSettings => {
-                self.settings_form = crate::storage::settings::read_settings();
-                self.settings_msg = None;
+                match crate::storage::settings::read_settings() {
+                    Ok(settings) => {
+                        self.settings_form = settings;
+                        self.settings_msg = None;
+                    }
+                    Err(error) => {
+                        self.settings_msg = Some(error);
+                    }
+                }
                 self.settings_open = true;
             }
             AgendaMsg::CloseSettings => {
@@ -144,6 +158,7 @@ impl AgendaApp {
                 self.settings_open = false;
             }
             AgendaMsg::Close => {}
+            AgendaMsg::EscapePressed => {}
             AgendaMsg::SaveSettings {
                 calendar,
                 timezone,
@@ -164,8 +179,23 @@ impl AgendaApp {
                     language: Some(language),
                 };
 
+                let css = match crate::ui::theme::load_css(new_settings.theme_path.as_deref()) {
+                    Ok(css) => css,
+                    Err(err) => {
+                        self.settings_msg = Some(format!(
+                            "{}: {err}",
+                            translate(language, "failed_load_theme")
+                        ));
+                        self.settings_open = true;
+                        return;
+                    }
+                };
+
                 if let Err(err) = write_settings(&new_settings) {
-                    self.settings_msg = Some(format!("Failed to save settings: {err}"));
+                    self.settings_msg = Some(format!(
+                        "{}: {err}",
+                        translate(language, "failed_save_settings")
+                    ));
                     self.settings_open = true;
                 } else {
                     self.settings_form = new_settings.clone();
@@ -173,13 +203,7 @@ impl AgendaApp {
                     self.query.calendar = self.user_settings.calendar.clone();
                     self.query.timezone = self.user_settings.timezone.clone();
 
-                    // Dynamic theme reload
-                    if let Ok(css) =
-                        crate::ui::theme::load_css(self.user_settings.theme_path.as_deref())
-                    {
-                        crate::ui::theme::apply_css(&css);
-                    }
-
+                    crate::ui::theme::apply_css(&css);
                     self.settings_msg = None;
                     self.settings_open = false;
                     self.load_visible_range(sender, true);
@@ -187,23 +211,37 @@ impl AgendaApp {
             }
             AgendaMsg::Logout => {
                 let token_file = paths::oauth_token_file();
-                if token_file.exists() {
-                    let _ = std::fs::remove_file(token_file);
+                let mut cleanup_errors = Vec::new();
+                match std::fs::remove_file(&token_file) {
+                    Ok(()) => {}
+                    Err(err) if err.kind() == io::ErrorKind::NotFound => {}
+                    Err(err) => {
+                        cleanup_errors
+                            .push(format!("Could not delete {}: {err}", token_file.display()));
+                    }
                 }
 
-                // Clear active events and cache
-                let range = self.current_range();
-                let cache_file =
-                    paths::cache_file(&crate::storage::cache::cache_key(&self.query, range));
-                if cache_file.exists() {
-                    let _ = std::fs::remove_file(cache_file);
+                if let Err(err) = clear_agenda_cache() {
+                    cleanup_errors.push(err);
                 }
 
                 self.state.events.clear();
                 self.state.fetched_at = None;
                 self.state.cached = false;
-                self.state.error = Some("Logged out. Please authenticate.".to_string());
-                self.settings_msg = Some("Logged out successfully.".to_string());
+                if cleanup_errors.is_empty() {
+                    let lang = self.language();
+                    self.state.error = Some(translate(lang, "logged_out_please_auth").to_string());
+                    self.settings_msg = Some(translate(lang, "logged_out_success").to_string());
+                } else {
+                    let lang = self.language();
+                    let message = format!(
+                        "{}: {}",
+                        translate(lang, "logged_out_cleanup_incomplete"),
+                        cleanup_errors.join("; ")
+                    );
+                    self.state.error = Some(message.clone());
+                    self.settings_msg = Some(message);
+                }
             }
         }
     }
@@ -217,7 +255,7 @@ impl AgendaApp {
             AgendaCommandOutput::Auth(Ok(())) => {
                 self.authenticating = false;
                 self.state.error =
-                    Some("Google Calendar authenticated. Loading events...".to_string());
+                    Some(translate(self.language(), "google_account_authenticated").to_string());
                 self.load_visible_range(sender, true);
             }
             AgendaCommandOutput::Auth(Err(error)) => {
@@ -265,7 +303,7 @@ impl AgendaApp {
     }
 
     fn select_today(&mut self) {
-        let today = Local::now().date_naive();
+        let today = today_for_timezone(self.query.timezone.as_deref());
         self.calendar_year = today.year();
         self.calendar_month = today.month();
         self.calendar_view = CalendarViewMode::Days;
@@ -277,7 +315,7 @@ impl AgendaApp {
             return;
         }
         self.authenticating = true;
-        self.state.error = Some("Opening browser for Google OAuth...".to_string());
+        self.state.error = Some(translate(self.language(), "opening_browser_oauth").to_string());
         sender.spawn_oneshot_command(|| AgendaCommandOutput::Auth(google::auth_calendar()));
     }
 
@@ -292,9 +330,12 @@ impl AgendaApp {
         }
         match google::save_client_secret(&client_id, &client_secret) {
             Ok(path) => {
+                let lang = self.language();
                 self.state.error = Some(format!(
-                    "OAuth client saved to {}. Opening browser for Google OAuth...",
-                    path.display()
+                    "{} {}. {}",
+                    translate(lang, "oauth_client_saved_to"),
+                    path.display(),
+                    translate(lang, "opening_browser_oauth")
                 ));
                 sender.input(AgendaMsg::StartAuth);
             }
@@ -325,9 +366,11 @@ impl AgendaApp {
             self.state.cached = !self.state.events.is_empty();
         } else {
             let fetched_at = Local::now();
-            write_cache(&self.query, result.range, &result.events, fetched_at);
+            let cache_error =
+                write_cache(&self.query, result.range, &result.events, fetched_at).err();
             self.state.events = result.events;
-            self.state.error = None;
+            self.state.error = cache_error
+                .map(|error| format!("Events loaded, but cache could not be saved: {error}"));
             self.state.fetched_at = Some(fetched_at);
             self.state.cached = false;
         }

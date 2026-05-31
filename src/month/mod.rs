@@ -1,5 +1,10 @@
-use crate::calendar::date::{month_dates, month_name, shift_month};
-use crate::calendar::view::{CalendarViewMode, YEAR_GRID_COUNT, YEAR_PAGE_STEP, year_page_start};
+use crate::calendar::date::{month_dates, shift_month};
+use crate::calendar::view::{
+    CalendarViewMode, YEAR_GRID_COUNT, YEAR_PAGE_STEP, calendar_title_icon_name,
+    calendar_title_text, next_calendar_tooltip, previous_calendar_tooltip, year_page_start,
+};
+use crate::i18n::{month_name, translate, weekday_short};
+use crate::storage::settings::{Language, read_settings};
 use crate::ui::{add_escape_action, classed_button, clear_grid, icon_button, label};
 use adw::prelude::*;
 use chrono::{Datelike, Local, NaiveDate};
@@ -11,6 +16,7 @@ pub struct MonthApp {
     month: u32,
     view: CalendarViewMode,
     selected: NaiveDate,
+    language: Language,
 }
 
 #[derive(Debug)]
@@ -59,11 +65,15 @@ impl Component for MonthApp {
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let today = Local::now().date_naive();
+        let language = read_settings()
+            .map(|settings| settings.language.unwrap_or_default())
+            .unwrap_or_default();
         let model = MonthApp {
             year: today.year(),
             month: today.month(),
             view: CalendarViewMode::Days,
             selected: today,
+            language,
         };
 
         let root_box = gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -75,19 +85,19 @@ impl Component for MonthApp {
         let previous = icon_button(
             "go-previous-symbolic",
             &["nav-button", "icon-button"],
-            "Previous month",
+            previous_calendar_tooltip(CalendarViewMode::Days, language),
         );
         let next = icon_button(
             "go-next-symbolic",
             &["nav-button", "icon-button"],
-            "Next month",
+            next_calendar_tooltip(CalendarViewMode::Days, language),
         );
         let close = icon_button(
             "window-close-symbolic",
             &["close-button", "icon-button"],
-            "Close",
+            translate(language, "close"),
         );
-        let (title_button, title_label, title_icon) = calendar_title_button("");
+        let (title_button, title_label, title_icon) = calendar_title_button("", language);
         title_button.set_hexpand(true);
 
         topbar.append(&previous);
@@ -106,7 +116,7 @@ impl Component for MonthApp {
         root_box.append(&grid);
 
         let bottom = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let today_button = classed_button("Today", &["action-button"]);
+        let today_button = classed_button(translate(language, "today"), &["action-button"]);
         bottom.append(&today_button);
         root_box.append(&bottom);
 
@@ -209,19 +219,27 @@ impl MonthApp {
 fn render_month(model: &MonthApp, widgets: &mut MonthWidgets, sender: ComponentSender<MonthApp>) {
     clear_grid(&widgets.grid);
 
-    widgets.title_label.set_text(&title_text(model));
+    widgets.title_label.set_text(&calendar_title_text(
+        model.view,
+        model.year,
+        model.month,
+        model.language,
+    ));
     widgets
         .title_icon
-        .set_icon_name(Some(title_icon_name(model.view)));
+        .set_icon_name(Some(calendar_title_icon_name(model.view)));
     widgets
         .previous
-        .set_tooltip_text(Some(previous_tooltip(model.view)));
+        .set_tooltip_text(Some(previous_calendar_tooltip(model.view, model.language)));
     widgets
         .next
-        .set_tooltip_text(Some(next_tooltip(model.view)));
-    widgets
-        .selected_label
-        .set_text(&model.selected.format("%A, %B %-d, %Y").to_string());
+        .set_tooltip_text(Some(next_calendar_tooltip(model.view, model.language)));
+    let selected_text = if model.language == Language::Chinese {
+        model.selected.format("%Y-%m-%d").to_string()
+    } else {
+        model.selected.format("%A, %B %-d, %Y").to_string()
+    };
+    widgets.selected_label.set_text(&selected_text);
 
     match model.view {
         CalendarViewMode::Days => render_day_grid(model, widgets, sender),
@@ -237,10 +255,7 @@ fn render_day_grid(
 ) {
     configure_day_grid(&widgets.grid);
 
-    for (col, weekday) in ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
-        .iter()
-        .enumerate()
-    {
+    for (col, weekday) in weekday_short(model.language).iter().enumerate() {
         let item = label(weekday, &["weekday"], 0.5, false);
         item.set_size_request(40, 22);
         widgets.grid.attach(&item, col as i32, 0, 1, 1);
@@ -282,7 +297,7 @@ fn render_month_grid(
     let today = Local::now().date_naive();
     for month in 1..=12 {
         let index = month - 1;
-        let item = classed_button(month_name(month), &["calendar-picker-cell"]);
+        let item = classed_button(month_name(model.language, month), &["calendar-picker-cell"]);
         item.set_size_request(108, 44);
         if month == model.month {
             item.add_css_class("selected");
@@ -340,10 +355,10 @@ fn configure_picker_grid(grid: &gtk::Grid) {
     grid.set_halign(gtk::Align::Center);
 }
 
-fn calendar_title_button(text: &str) -> (gtk::Button, gtk::Label, gtk::Image) {
+fn calendar_title_button(text: &str, language: Language) -> (gtk::Button, gtk::Label, gtk::Image) {
     let button = gtk::Button::new();
     button.add_css_class("calendar-title-button");
-    button.set_tooltip_text(Some("Change calendar view"));
+    button.set_tooltip_text(Some(translate(language, "change_calendar_view")));
 
     let content = gtk::Box::new(gtk::Orientation::Horizontal, 5);
     content.add_css_class("calendar-title-content");
@@ -359,39 +374,4 @@ fn calendar_title_button(text: &str) -> (gtk::Button, gtk::Label, gtk::Image) {
 
     button.set_child(Some(&content));
     (button, text_label, icon)
-}
-
-fn title_text(model: &MonthApp) -> String {
-    match model.view {
-        CalendarViewMode::Days => format!("{} {}", month_name(model.month), model.year),
-        CalendarViewMode::Months => model.year.to_string(),
-        CalendarViewMode::Years => {
-            let start = year_page_start(model.year);
-            format!("{}-{}", start, start + YEAR_GRID_COUNT - 1)
-        }
-    }
-}
-
-fn title_icon_name(view: CalendarViewMode) -> &'static str {
-    if view == CalendarViewMode::Years {
-        "go-up-symbolic"
-    } else {
-        "go-down-symbolic"
-    }
-}
-
-fn previous_tooltip(view: CalendarViewMode) -> &'static str {
-    match view {
-        CalendarViewMode::Days => "Previous month",
-        CalendarViewMode::Months => "Previous year",
-        CalendarViewMode::Years => "Previous years",
-    }
-}
-
-fn next_tooltip(view: CalendarViewMode) -> &'static str {
-    match view {
-        CalendarViewMode::Days => "Next month",
-        CalendarViewMode::Months => "Next year",
-        CalendarViewMode::Years => "Next years",
-    }
 }

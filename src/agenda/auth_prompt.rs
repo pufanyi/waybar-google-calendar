@@ -6,7 +6,9 @@ mod widgets;
 use super::AgendaApp;
 use crate::calendar::model::AgendaState;
 use crate::google;
+use crate::i18n::translate;
 use crate::storage::paths;
+use crate::storage::settings::Language;
 use adw::prelude::*;
 use gtk::gio;
 use relm4::ComponentSender;
@@ -23,6 +25,7 @@ pub(super) const SETUP_GUIDE_URL: &str =
 pub(super) fn prompt_card(
     error: &str,
     authenticating: bool,
+    lang: Language,
     sender: ComponentSender<AgendaApp>,
 ) -> gtk::Box {
     let secret_present = paths::client_secret_file().exists();
@@ -31,15 +34,16 @@ pub(super) fn prompt_card(
     let card = gtk::Box::new(gtk::Orientation::Vertical, 12);
     card.add_css_class("empty-card");
     card.add_css_class("auth-prompt");
-    card.append(&header(secret_present, token_present));
-    card.append(&status::current(error, secret_present, token_present));
+    card.append(&header(secret_present, token_present, lang));
+    card.append(&status::current(error, secret_present, token_present, lang));
     card.append(&pages::build(
         secret_present,
         token_present,
         authenticating,
+        lang,
         sender.clone(),
     ));
-    card.append(&widgets::utility_actions(authenticating, sender));
+    card.append(&widgets::utility_actions(authenticating, lang, sender));
     card
 }
 
@@ -67,11 +71,11 @@ pub(super) fn should_focus(state: &AgendaState, authenticating: bool) -> bool {
         .unwrap_or(false)
 }
 
-fn header(secret_present: bool, token_present: bool) -> gtk::Box {
+fn header(secret_present: bool, token_present: bool, lang: Language) -> gtk::Box {
     let header = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     header.add_css_class("auth-header");
     header.append(&crate::ui::label(
-        "Connect Google Calendar",
+        translate(lang, "connect_google_calendar"),
         &["event-title"],
         0.0,
         false,
@@ -81,11 +85,11 @@ fn header(secret_present: bool, token_present: bool) -> gtk::Box {
     header.append(&header_spacer);
     header.append(&status::badge(
         if token_present {
-            "Connected"
+            translate(lang, "connected")
         } else if secret_present {
-            "Authorize"
+            translate(lang, "authorize")
         } else {
-            "Setup"
+            translate(lang, "setup")
         },
         if token_present {
             "success"

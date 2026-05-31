@@ -31,6 +31,7 @@ Guidance for agents working in this repository.
     calendar navigation view state.
   - `src/storage/`: filesystem paths, agenda cache, and persistent user settings.
   - `src/google/`: Google Calendar API, OAuth, transport helpers, and response types.
+  - `src/i18n.rs`: localized UI text lookup.
   - `src/month/`: standalone local month calendar popup.
   - `src/ui/`: shared GTK widget helpers and theme loading.
 - `src/agenda.rs` defines the agenda component entrypoint, state, messages, and
