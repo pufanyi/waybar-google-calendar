@@ -1962,7 +1962,7 @@ dependencies = [
 
 [[package]]
 name = "waybar-google-calendar"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "chrono",
  "chrono-tz",
