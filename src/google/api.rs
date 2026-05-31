@@ -168,3 +168,33 @@ fn range_boundary(date: NaiveDate, timezone: Option<&str>) -> Result<String, Str
         .map(|date_time| date_time.to_rfc3339())
         .ok_or_else(|| format!("Could not build local range boundary for {date}"))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+
+    #[test]
+    fn test_range_boundary_valid_timezone() {
+        let date = NaiveDate::from_ymd_opt(2026, 5, 30).unwrap();
+        let boundary = range_boundary(date, Some("Asia/Shanghai")).unwrap();
+        assert_eq!(boundary, "2026-05-30T00:00:00+08:00");
+
+        let boundary_utc = range_boundary(date, Some("UTC")).unwrap();
+        assert_eq!(boundary_utc, "2026-05-30T00:00:00+00:00");
+    }
+
+    #[test]
+    fn test_range_boundary_invalid_timezone() {
+        let date = NaiveDate::from_ymd_opt(2026, 5, 30).unwrap();
+        let err = range_boundary(date, Some("Invalid/Timezone")).unwrap_err();
+        assert!(err.contains("Invalid timezone: Invalid/Timezone"));
+    }
+
+    #[test]
+    fn test_range_boundary_none_timezone_fallback() {
+        let date = NaiveDate::from_ymd_opt(2026, 5, 30).unwrap();
+        let boundary = range_boundary(date, None).unwrap();
+        assert!(boundary.contains("2026-05-30T00:00:00"));
+    }
+}

@@ -307,4 +307,127 @@ mod tests {
             Some(Path::new("/saved/theme.css"))
         );
     }
+
+    #[test]
+    fn test_parse_auth_and_help_commands() {
+        let auth_cmd = parse_args_with_sources(
+            vec!["auth".to_string()],
+            settings(),
+            no_env_string,
+            no_env_path,
+        )
+        .unwrap();
+        assert!(matches!(auth_cmd, CliCommand::Auth));
+
+        let auth_ui_cmd = parse_args_with_sources(
+            vec!["auth-ui".to_string()],
+            settings(),
+            no_env_string,
+            no_env_path,
+        )
+        .unwrap();
+        let auth_ui_config = run_config(auth_ui_cmd);
+        assert_eq!(auth_ui_config.mode, Mode::Auth);
+
+        let print_theme_cmd = parse_args_with_sources(
+            vec!["print-theme".to_string()],
+            settings(),
+            no_env_string,
+            no_env_path,
+        )
+        .unwrap();
+        assert!(matches!(print_theme_cmd, CliCommand::PrintTheme));
+
+        let help_cmd = parse_args_with_sources(
+            vec!["--help".to_string()],
+            settings(),
+            no_env_string,
+            no_env_path,
+        )
+        .unwrap();
+        assert!(matches!(help_cmd, CliCommand::Help));
+    }
+
+    #[test]
+    fn test_parse_invalid_args() {
+        assert!(
+            parse_args_with_sources(
+                vec!["--days".to_string(), "0".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+
+        assert!(
+            parse_args_with_sources(
+                vec!["--days".to_string(), "91".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+
+        assert!(
+            parse_args_with_sources(
+                vec!["--days".to_string(), "abc".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+
+        assert!(
+            parse_args_with_sources(
+                vec!["--days".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+
+        assert!(
+            parse_args_with_sources(
+                vec!["--theme".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+
+        assert!(
+            parse_args_with_sources(
+                vec!["--calendar".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+
+        assert!(
+            parse_args_with_sources(
+                vec!["--timezone".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+
+        assert!(
+            parse_args_with_sources(
+                vec!["--unknown-flag".to_string()],
+                settings(),
+                no_env_string,
+                no_env_path,
+            )
+            .is_err()
+        );
+    }
 }

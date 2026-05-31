@@ -111,4 +111,46 @@ mod tests {
             "2020-2031"
         );
     }
+
+    #[test]
+    fn test_calendar_tooltips_and_icons() {
+        assert_eq!(
+            previous_calendar_tooltip(CalendarViewMode::Days, Language::English),
+            "Previous month"
+        );
+        assert_eq!(
+            next_calendar_tooltip(CalendarViewMode::Months, Language::English),
+            "Next year"
+        );
+        assert_eq!(
+            calendar_title_tooltip(CalendarViewMode::Years, Language::English),
+            "Return to days"
+        );
+
+        assert_eq!(
+            previous_calendar_tooltip(CalendarViewMode::Days, Language::Chinese),
+            "上个月"
+        );
+        assert_eq!(
+            next_calendar_tooltip(CalendarViewMode::Months, Language::Chinese),
+            "下一年"
+        );
+        assert_eq!(
+            calendar_title_tooltip(CalendarViewMode::Years, Language::Chinese),
+            "返回日期"
+        );
+
+        assert_eq!(
+            calendar_title_icon_name(CalendarViewMode::Years),
+            "go-up-symbolic"
+        );
+        assert_eq!(
+            calendar_title_icon_name(CalendarViewMode::Days),
+            "go-down-symbolic"
+        );
+        assert_eq!(
+            calendar_title_icon_name(CalendarViewMode::Months),
+            "go-down-symbolic"
+        );
+    }
 }

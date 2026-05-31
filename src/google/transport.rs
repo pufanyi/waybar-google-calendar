@@ -38,3 +38,42 @@ fn api_error_message(status: StatusCode, body: &str) -> String {
         .trim();
     format!("Google Calendar API returned {status}: {detail}")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use reqwest::StatusCode;
+
+    #[test]
+    fn test_api_error_message_valid_json() {
+        let status = StatusCode::BAD_REQUEST;
+        let body = r#"{"error": {"message": "Invalid API key"}}"#;
+        let msg = api_error_message(status, body);
+        assert_eq!(
+            msg,
+            "Google Calendar API returned 400 Bad Request: Invalid API key"
+        );
+    }
+
+    #[test]
+    fn test_api_error_message_non_json() {
+        let status = StatusCode::INTERNAL_SERVER_ERROR;
+        let body = "Service is currently unavailable.\nPlease try again later.";
+        let msg = api_error_message(status, body);
+        assert_eq!(
+            msg,
+            "Google Calendar API returned 500 Internal Server Error: Service is currently unavailable."
+        );
+    }
+
+    #[test]
+    fn test_api_error_message_empty_body() {
+        let status = StatusCode::UNAUTHORIZED;
+        let body = "   \n  \n  ";
+        let msg = api_error_message(status, body);
+        assert_eq!(
+            msg,
+            "Google Calendar API returned 401 Unauthorized: empty response"
+        );
+    }
+}

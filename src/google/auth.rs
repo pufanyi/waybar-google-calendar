@@ -159,3 +159,98 @@ fn create_secure_dir(path: &std::path::Path) -> Result<(), String> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::sync::Mutex;
+
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn test_save_client_secret_validation() {
+        assert!(save_client_secret("", "secret").is_err());
+        assert!(save_client_secret("id", "").is_err());
+        assert!(save_client_secret("   ", "secret").is_err());
+        assert!(save_client_secret("id", "   ").is_err());
+    }
+
+    #[test]
+    fn test_secure_file_permissions() {
+        let dir = std::env::temp_dir().join(format!("gcal-auth-test-file-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+
+        let file = dir.join("test.txt");
+        fs::write(&file, "secret").unwrap();
+
+        secure_file(&file);
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = fs::metadata(&file).unwrap();
+            let mode = metadata.permissions().mode();
+            assert_eq!(mode & 0o777, 0o600);
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_create_secure_dir_permissions() {
+        let dir = std::env::temp_dir().join(format!("gcal-auth-test-dir-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+
+        create_secure_dir(&dir).unwrap();
+
+        assert!(dir.exists());
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = fs::metadata(&dir).unwrap();
+            let mode = metadata.permissions().mode();
+            assert_eq!(mode & 0o777, 0o700);
+        }
+
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_save_client_secret_roundtrip() {
+        let _guard = ENV_LOCK.lock().unwrap();
+
+        let temp_dir =
+            std::env::temp_dir().join(format!("gcal-auth-test-secret-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp_dir);
+        fs::create_dir_all(&temp_dir).unwrap();
+
+        let secret_file = temp_dir.join("client_secret.json");
+        unsafe {
+            std::env::set_var("WAYBAR_GCAL_CLIENT_SECRET", &secret_file);
+        }
+
+        let path = save_client_secret("my_client_id", "my_client_secret").unwrap();
+        assert_eq!(path, secret_file);
+        assert!(secret_file.exists());
+
+        let content = fs::read_to_string(&secret_file).unwrap();
+        assert!(content.contains("my_client_id"));
+        assert!(content.contains("my_client_secret"));
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = fs::metadata(&secret_file).unwrap();
+            let mode = metadata.permissions().mode();
+            assert_eq!(mode & 0o777, 0o600);
+        }
+
+        unsafe {
+            std::env::remove_var("WAYBAR_GCAL_CLIENT_SECRET");
+        }
+        let _ = fs::remove_dir_all(&temp_dir);
+    }
+}
