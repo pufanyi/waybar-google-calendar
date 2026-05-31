@@ -16,16 +16,26 @@ pub enum Language {
 #[serde(rename_all = "lowercase")]
 pub enum WeekStart {
     #[default]
+    Sunday,
     Monday,
     Tuesday,
     Wednesday,
     Thursday,
     Friday,
     Saturday,
-    Sunday,
 }
 
 impl WeekStart {
+    pub const SETTINGS_ORDER: [Self; 7] = [
+        Self::Sunday,
+        Self::Monday,
+        Self::Tuesday,
+        Self::Wednesday,
+        Self::Thursday,
+        Self::Friday,
+        Self::Saturday,
+    ];
+
     pub fn days_from_monday(self) -> u32 {
         match self {
             Self::Monday => 0,
@@ -158,6 +168,17 @@ mod tests {
         assert!(settings.theme_path.is_none());
         assert_eq!(settings.language, None);
         assert_eq!(settings.week_start, None);
+    }
+
+    #[test]
+    fn week_start_defaults_to_sunday() {
+        assert_eq!(WeekStart::default(), WeekStart::Sunday);
+    }
+
+    #[test]
+    fn week_start_settings_order_starts_with_sunday() {
+        assert_eq!(WeekStart::SETTINGS_ORDER[0], WeekStart::Sunday);
+        assert_eq!(WeekStart::SETTINGS_ORDER.len(), 7);
     }
 
     #[test]

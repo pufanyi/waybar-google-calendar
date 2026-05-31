@@ -84,13 +84,14 @@ pub(super) fn selected_week_start(widgets: &CalendarWidgets) -> WeekStart {
 
 pub(super) fn selected_week_start_from_combo(combo: &gtk::ComboBoxText) -> WeekStart {
     match combo.active_id().as_deref() {
+        Some("monday") => WeekStart::Monday,
         Some("tuesday") => WeekStart::Tuesday,
         Some("wednesday") => WeekStart::Wednesday,
         Some("thursday") => WeekStart::Thursday,
         Some("friday") => WeekStart::Friday,
         Some("saturday") => WeekStart::Saturday,
         Some("sunday") => WeekStart::Sunday,
-        _ => WeekStart::Monday,
+        _ => WeekStart::default(),
     }
 }
 
@@ -101,15 +102,7 @@ fn update_week_start_options(widgets: &CalendarWidgets, lang: Language) {
 
 fn set_week_start_options(combo: &gtk::ComboBoxText, lang: Language, selected: WeekStart) {
     combo.remove_all();
-    for week_start in [
-        WeekStart::Monday,
-        WeekStart::Tuesday,
-        WeekStart::Wednesday,
-        WeekStart::Thursday,
-        WeekStart::Friday,
-        WeekStart::Saturday,
-        WeekStart::Sunday,
-    ] {
+    for week_start in WeekStart::SETTINGS_ORDER {
         combo.append(
             Some(week_start_id(week_start)),
             week_start_name(lang, week_start),
