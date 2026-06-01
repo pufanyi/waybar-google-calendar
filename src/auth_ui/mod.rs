@@ -1,19 +1,22 @@
 use crate::google;
+use crate::i18n::translate;
 use crate::storage::paths;
-use crate::ui::{add_escape_action, classed_button, label};
+use crate::storage::settings::{Language, read_settings};
+use crate::ui::{add_escape_action, classed_button, icon_button, label};
 use adw::prelude::*;
 use gtk::gio;
 use relm4::{Component, ComponentParts, ComponentSender};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const GOOGLE_CLOUD_CREDENTIALS_URL: &str = "https://console.cloud.google.com/apis/credentials";
+const GOOGLE_CLOUD_CREDENTIALS_URL: &str = "https://console.cloud.google.com/auth/clients";
 
 #[derive(Debug, Clone)]
 pub struct AuthApp {
     status: AuthStatus,
     message: String,
     loading: bool,
+    language: Language,
 }
 
 #[derive(Debug, Clone)]
@@ -62,9 +65,10 @@ impl Component for AuthApp {
             .title("Google Calendar Auth")
             .default_width(640)
             .default_height(380)
-            .resizable(false)
+            .resizable(true)
             .build();
         root.set_decorated(false);
+        root.set_size_request(500, 320);
         root
     }
 
@@ -75,16 +79,29 @@ impl Component for AuthApp {
     ) -> ComponentParts<Self> {
         let root_box = gtk::Box::new(gtk::Orientation::Vertical, 12);
         root_box.add_css_class("panel");
+        let language = read_settings()
+            .ok()
+            .and_then(|settings| settings.language)
+            .unwrap_or_default();
 
         let topbar = gtk::Box::new(gtk::Orientation::Horizontal, 10);
         topbar.add_css_class("topbar");
-        topbar.append(&label("Google Calendar Auth", &["title"], 0.0, false));
+        topbar.append(&label(
+            translate(language, "google_calendar_auth"),
+            &["title"],
+            0.0,
+            false,
+        ));
 
         let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
         spacer.set_hexpand(true);
         topbar.append(&spacer);
 
-        let close = classed_button("x", &["close-button"]);
+        let close = icon_button(
+            "window-close-symbolic",
+            &["close-button", "icon-button"],
+            translate(language, "close"),
+        );
         {
             let sender = sender.clone();
             close.connect_clicked(move |_| sender.input(AuthMsg::Close));
@@ -98,22 +115,32 @@ impl Component for AuthApp {
         let secret_path = path_label("");
         let secret_badge = badge_label("");
         card.append(&settings_row(
-            "OAuth client secret",
+            translate(language, "oauth_client_status"),
             &secret_path,
             &secret_badge,
         ));
 
         let token_path = path_label("");
         let token_badge = badge_label("");
-        card.append(&settings_row("Token cache", &token_path, &token_badge));
+        card.append(&settings_row(
+            translate(language, "oauth_token_status"),
+            &token_path,
+            &token_badge,
+        ));
         root_box.append(&card);
 
-        let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let start = classed_button("Start Authentication", &["action-button"]);
-        let refresh = classed_button("Refresh", &["action-button"]);
-        let open_config = classed_button("Open Config Folder", &["action-button"]);
-        let open_token = classed_button("Open Token Folder", &["action-button"]);
-        let open_cloud = classed_button("Google Cloud", &["action-button"]);
+        let actions = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        let primary_actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let utility_actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let start = classed_button(
+            translate(language, "start_authentication"),
+            &["action-button"],
+        );
+        start.add_css_class("primary-action");
+        let refresh = classed_button(translate(language, "refresh"), &["action-button"]);
+        let open_config = classed_button(translate(language, "config_folder"), &["action-button"]);
+        let open_token = classed_button(translate(language, "token_folder"), &["action-button"]);
+        let open_cloud = classed_button(translate(language, "google_cloud"), &["action-button"]);
 
         {
             let sender = sender.clone();
@@ -136,11 +163,13 @@ impl Component for AuthApp {
             open_cloud.connect_clicked(move |_| sender.input(AuthMsg::OpenGoogleCloud));
         }
 
-        actions.append(&start);
-        actions.append(&refresh);
-        actions.append(&open_config);
-        actions.append(&open_token);
-        actions.append(&open_cloud);
+        primary_actions.append(&start);
+        primary_actions.append(&refresh);
+        utility_actions.append(&open_config);
+        utility_actions.append(&open_token);
+        utility_actions.append(&open_cloud);
+        actions.append(&primary_actions);
+        actions.append(&utility_actions);
         root_box.append(&actions);
 
         let message = label("", &["muted", "auth-message"], 0.0, true);
@@ -152,10 +181,12 @@ impl Component for AuthApp {
             add_escape_action(&root, move || sender.input(AuthMsg::Close));
         }
 
+        let status = AuthStatus::read();
         let model = AuthApp {
-            status: AuthStatus::read(),
-            message: "Ready".to_string(),
+            message: status_message(&status, language),
+            status,
             loading: false,
+            language,
         };
         let mut widgets = AuthWidgets {
             secret_path,
@@ -178,29 +209,29 @@ impl Component for AuthApp {
                     return;
                 }
                 self.loading = true;
-                self.message = "Opening browser for Google OAuth...".to_string();
+                self.message = translate(self.language, "opening_browser_oauth").to_string();
                 sender
                     .spawn_oneshot_command(|| AuthCommandOutput::Finished(google::auth_calendar()));
             }
             AuthMsg::Refresh => {
                 self.status = AuthStatus::read();
-                self.message = status_message(&self.status);
+                self.message = status_message(&self.status, self.language);
             }
             AuthMsg::OpenConfigDir => {
                 self.message = open_dir(&paths::config_dir())
-                    .map(|_| "Config folder opened.".to_string())
+                    .map(|_| translate(self.language, "config_folder_opened").to_string())
                     .unwrap_or_else(|error| error);
                 self.status = AuthStatus::read();
             }
             AuthMsg::OpenTokenDir => {
                 self.message = open_dir(&paths::data_dir())
-                    .map(|_| "Token folder opened.".to_string())
+                    .map(|_| translate(self.language, "token_folder_opened").to_string())
                     .unwrap_or_else(|error| error);
                 self.status = AuthStatus::read();
             }
             AuthMsg::OpenGoogleCloud => {
                 self.message = google::open_external_uri(GOOGLE_CLOUD_CREDENTIALS_URL)
-                    .map(|_| "Google Cloud opened in your browser.".to_string())
+                    .map(|_| translate(self.language, "google_cloud_opened").to_string())
                     .unwrap_or_else(|error| error);
             }
             AuthMsg::Close => {
@@ -219,7 +250,7 @@ impl Component for AuthApp {
         self.status = AuthStatus::read();
         match output {
             AuthCommandOutput::Finished(Ok(())) => {
-                self.message = "Google Calendar authenticated.".to_string();
+                self.message = translate(self.language, "google_account_authenticated").to_string();
             }
             AuthCommandOutput::Finished(Err(error)) => {
                 self.message = error;
@@ -252,17 +283,25 @@ fn render_auth(model: &AuthApp, widgets: &mut AuthWidgets) {
     widgets
         .token_path
         .set_text(&model.status.token_path.display().to_string());
-    set_badge(&widgets.secret_badge, model.status.secret_present);
-    set_badge(&widgets.token_badge, model.status.token_present);
+    set_client_badge(
+        &widgets.secret_badge,
+        model.status.secret_present,
+        model.language,
+    );
+    set_token_badge(
+        &widgets.token_badge,
+        model.status.token_present,
+        model.language,
+    );
     widgets.message.set_text(&model.message);
     widgets
         .start
         .set_sensitive(model.status.secret_present && !model.loading);
     widgets.refresh.set_sensitive(!model.loading);
     widgets.start.set_label(if model.loading {
-        "Authenticating"
+        translate(model.language, "authenticating")
     } else {
-        "Start Authentication"
+        translate(model.language, "start_authentication")
     });
 }
 
@@ -290,23 +329,37 @@ fn badge_label(text: &str) -> gtk::Label {
     label(text, &["status-badge"], 0.5, false)
 }
 
-fn set_badge(widget: &gtk::Label, present: bool) {
+fn set_client_badge(widget: &gtk::Label, present: bool, lang: Language) {
     widget.remove_css_class("success");
     widget.remove_css_class("warning");
+    widget.remove_css_class("info");
     if present {
-        widget.set_text("Ready");
-        widget.add_css_class("success");
+        widget.set_text(translate(lang, "saved"));
+        widget.add_css_class("info");
     } else {
-        widget.set_text("Missing");
+        widget.set_text(translate(lang, "setup"));
         widget.add_css_class("warning");
     }
 }
 
-fn status_message(status: &AuthStatus) -> String {
+fn set_token_badge(widget: &gtk::Label, present: bool, lang: Language) {
+    widget.remove_css_class("success");
+    widget.remove_css_class("warning");
+    widget.remove_css_class("info");
+    if present {
+        widget.set_text(translate(lang, "authenticated"));
+        widget.add_css_class("success");
+    } else {
+        widget.set_text(translate(lang, "missing_token"));
+        widget.add_css_class("warning");
+    }
+}
+
+fn status_message(status: &AuthStatus, lang: Language) -> String {
     match (status.secret_present, status.token_present) {
-        (false, _) => "Missing OAuth client secret.".to_string(),
-        (true, false) => "Ready to authenticate.".to_string(),
-        (true, true) => "Authenticated.".to_string(),
+        (false, _) => translate(lang, "no_oauth_client_saved").to_string(),
+        (true, false) => translate(lang, "oauth_client_saved_authorize").to_string(),
+        (true, true) => translate(lang, "google_calendar_credentials_saved").to_string(),
     }
 }
 

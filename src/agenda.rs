@@ -19,6 +19,10 @@ const AGENDA_WINDOW_WIDTH: i32 = 1060;
 const AGENDA_WINDOW_HEIGHT: i32 = 620;
 const SETTINGS_WINDOW_WIDTH: i32 = 1080;
 const SETTINGS_WINDOW_HEIGHT: i32 = 680;
+const AGENDA_WINDOW_MIN_WIDTH: i32 = 780;
+const AGENDA_WINDOW_MIN_HEIGHT: i32 = 480;
+const SETTINGS_WINDOW_MIN_WIDTH: i32 = 820;
+const SETTINGS_WINDOW_MIN_HEIGHT: i32 = 520;
 
 #[derive(Debug)]
 pub struct AgendaInit {
@@ -155,6 +159,7 @@ impl Component for AgendaApp {
             .resizable(false)
             .build();
         root.set_decorated(false);
+        root.set_size_request(AGENDA_WINDOW_MIN_WIDTH, AGENDA_WINDOW_MIN_HEIGHT);
         root
     }
 
@@ -371,6 +376,7 @@ impl Component for AgendaApp {
         sender: ComponentSender<Self>,
         root: &Self::Root,
     ) {
+        let was_settings_open = self.settings_open;
         let should_sync_settings = matches!(message, AgendaMsg::OpenSettings);
         let should_close = matches!(message, AgendaMsg::Close)
             || matches!(message, AgendaMsg::EscapePressed) && !self.settings_open;
@@ -381,7 +387,9 @@ impl Component for AgendaApp {
             return;
         }
 
-        set_window_size(root, self.settings_open);
+        if was_settings_open != self.settings_open {
+            set_window_size(root, self.settings_open);
+        }
         if should_skip_view {
             return;
         }
@@ -404,11 +412,21 @@ impl AgendaApp {
 }
 
 fn set_window_size(root: &adw::ApplicationWindow, settings_open: bool) {
-    let (width, height) = if settings_open {
-        (SETTINGS_WINDOW_WIDTH, SETTINGS_WINDOW_HEIGHT)
+    let (width, height, min_width, min_height) = if settings_open {
+        (
+            SETTINGS_WINDOW_WIDTH,
+            SETTINGS_WINDOW_HEIGHT,
+            SETTINGS_WINDOW_MIN_WIDTH,
+            SETTINGS_WINDOW_MIN_HEIGHT,
+        )
     } else {
-        (AGENDA_WINDOW_WIDTH, AGENDA_WINDOW_HEIGHT)
+        (
+            AGENDA_WINDOW_WIDTH,
+            AGENDA_WINDOW_HEIGHT,
+            AGENDA_WINDOW_MIN_WIDTH,
+            AGENDA_WINDOW_MIN_HEIGHT,
+        )
     };
     root.set_default_size(width, height);
-    root.set_size_request(width, height);
+    root.set_size_request(min_width, min_height);
 }

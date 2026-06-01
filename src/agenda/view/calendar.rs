@@ -237,7 +237,7 @@ fn style_day_button(
 fn actions(model: &AgendaApp, today: NaiveDate, sender: ComponentSender<AgendaApp>) -> gtk::Box {
     let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
     actions.add_css_class("calendar-actions");
-    let all = classed_button(translate(model.language(), "all"), &["action-button"]);
+    let all = classed_button(translate(model.language(), "all_dates"), &["action-button"]);
     if model.selected_day.is_none() {
         all.add_css_class("selected");
     }

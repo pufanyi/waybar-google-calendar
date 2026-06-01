@@ -295,6 +295,7 @@ fn confirm_delete(
     if let Some(key) = event.key() {
         let delete = classed_button(translate(lang, "delete_event"), &["action-button"]);
         delete.add_css_class("danger-action");
+        delete.add_css_class("destructive-action");
         delete.set_sensitive(!mutating);
         delete.connect_clicked(move |_| sender.input(AgendaMsg::DeleteEvent(key.clone())));
         actions.append(&delete);
@@ -448,10 +449,12 @@ fn detail_row(title: &str, value: &str, wrap: bool) -> gtk::Box {
 }
 
 fn entry(text: &str, placeholder: &str) -> gtk::Entry {
-    gtk::Entry::builder()
+    let entry = gtk::Entry::builder()
         .text(text)
         .placeholder_text(placeholder)
-        .build()
+        .build();
+    entry.add_css_class("text-entry");
+    entry
 }
 
 fn text_view_content(view: &gtk::TextView) -> String {

@@ -61,7 +61,7 @@ pub(super) fn build(
     }
     container.append(&apply_button);
 
-    let save_button = classed_button(translate(lang, "save"), &["action-button"]);
+    let save_button = classed_button(translate(lang, "save_close"), &["action-button"]);
     save_button.add_css_class("primary-action");
     {
         let sender = sender.clone();
@@ -94,7 +94,7 @@ pub(super) fn build(
 pub(super) fn update_text(widgets: &FooterWidgets, lang: Language) {
     widgets.cancel_button.set_label(translate(lang, "cancel"));
     widgets.apply_button.set_label(translate(lang, "apply"));
-    widgets.save_button.set_label(translate(lang, "save"));
+    widgets.save_button.set_label(translate(lang, "save_close"));
 }
 
 pub(super) fn update_message(widgets: &FooterWidgets, lang: Language, message: Option<&str>) {

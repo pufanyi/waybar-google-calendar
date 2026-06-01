@@ -22,6 +22,7 @@ pub(super) fn credentials(
     form.append(&field_row(translate(lang, "client_secret"), &client_secret));
 
     let save = classed_button(button_label, &["action-button"]);
+    save.add_css_class("primary-action");
     save.set_sensitive(!authenticating);
     {
         let client_id = client_id.clone();

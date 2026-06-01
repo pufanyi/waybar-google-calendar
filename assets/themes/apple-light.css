@@ -204,6 +204,10 @@ tooltip label {
   background: #ffffff;
 }
 
+.date-cell.selected .event-dot.empty {
+  background: transparent;
+}
+
 .date-cell.outside .event-dot {
   opacity: 0.42;
 }
@@ -340,9 +344,54 @@ tooltip label {
   min-height: 28px;
 }
 
+.agenda-inline-refresh {
+  background: rgba(0, 122, 255, 0.06);
+  border: 1px solid rgba(0, 122, 255, 0.12);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.agenda-inline-spinner {
+  color: @accent;
+  min-height: 12px;
+  min-width: 12px;
+}
+
+.agenda-inline-refresh-label {
+  color: @ink_muted;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .agenda-list {
   padding-bottom: 4px;
   padding-right: 4px;
+}
+
+.status-banner {
+  border: 1px solid @hairline;
+  border-radius: 13px;
+  padding: 10px 12px;
+}
+
+.status-banner.info {
+  background: @accent_softer;
+  border-color: rgba(0, 122, 255, 0.18);
+}
+
+.status-banner.success {
+  background: @success_fill;
+  border-color: @success_line;
+}
+
+.status-banner.error {
+  background: @warning_fill;
+  border-color: @warning_line;
+}
+
+.status-banner-title {
+  color: @ink;
+  font-weight: 750;
 }
 
 .agenda-day-section {
@@ -484,6 +533,38 @@ tooltip label {
   min-width: 0;
 }
 
+.datetime-date-button {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(60, 60, 67, 0.13);
+  border-radius: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  color: @ink;
+  min-height: 32px;
+  min-width: 136px;
+  padding: 3px 10px;
+  transition: all 150ms ease;
+}
+
+.datetime-date-button:hover {
+  background: rgba(255, 255, 255, 0.86);
+  border-color: rgba(60, 60, 67, 0.22);
+}
+
+.datetime-date-button:focus {
+  background: #ffffff;
+  border-color: @accent;
+  box-shadow: 0 0 0 3px @accent_ring;
+  outline: none;
+}
+
+.datetime-date-label {
+  font-weight: 700;
+}
+
+.datetime-popover {
+  padding: 6px;
+}
+
 .datetime-calendar {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(60, 60, 67, 0.13);
@@ -502,6 +583,7 @@ tooltip label {
 
 .datetime-time-row {
   min-height: 32px;
+  min-width: 130px;
 }
 
 .datetime-spin {
@@ -556,9 +638,22 @@ tooltip label {
   color: @danger;
 }
 
-.event-date {
-  color: @accent;
-  font-weight: 700;
+.action-button.destructive-action {
+  background: linear-gradient(180deg, #ff665f, @danger);
+  border-color: rgba(180, 0, 0, 0.34);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 4px 12px rgba(255, 59, 48, 0.24);
+}
+
+.action-button.destructive-action:hover {
+  background: linear-gradient(180deg, #ff746d, #ff453a);
+  border-color: rgba(180, 0, 0, 0.38);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    0 6px 16px rgba(255, 59, 48, 0.32);
 }
 
 .event-time {
@@ -829,7 +924,7 @@ dropdown.text-entry arrow {
 .calendar-picker-cell:focus,
 .date-cell:focus,
 .day:focus {
-  box-shadow: none;
+  box-shadow: 0 0 0 3px @accent_ring;
   outline: none;
 }
 
@@ -1060,8 +1155,7 @@ dropdown.text-entry arrow {
 }
 
 .auth-instruction-text,
-.auth-step-detail,
-.auth-note {
+.auth-step-detail {
   font-size: 12px;
 }
 

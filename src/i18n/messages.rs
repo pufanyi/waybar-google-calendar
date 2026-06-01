@@ -15,6 +15,7 @@ fn chinese(key: &'static str) -> &'static str {
         "advanced" => "高级",
         "agenda" => "日程",
         "all" => "全部",
+        "all_dates" => "全部日期",
         "all_day" => "全天",
         "all_day_event" => "全天日程",
         "appearance" => "外观",
@@ -71,6 +72,7 @@ fn chinese(key: &'static str) -> &'static str {
         "failed_save_settings" => "保存设置失败",
         "google_account" => "Google 账号",
         "google_account_authenticated" => "Google Calendar 已认证，正在加载事件...",
+        "google_calendar_auth" => "Google 日历认证",
         "google_calendar" => "Google 日历",
         "google_calendar_api_opened" => "Google Calendar API 页面已在浏览器中打开。",
         "google_calendar_credentials_saved" => {
@@ -103,6 +105,8 @@ fn chinese(key: &'static str) -> &'static str {
         "oauth_client_saved_authorize" => "OAuth 客户端已保存。请在最后一步完成浏览器授权。",
         "oauth_client_saved_browser" => "OAuth 客户端已保存。开始浏览器授权以加载日历。",
         "oauth_client_saved_to" => "OAuth 客户端已保存到",
+        "oauth_client_status" => "OAuth 客户端",
+        "oauth_token_status" => "OAuth 令牌",
         "open_in_calendar" => "在 Google 日历中打开",
         "open_setup_guide_detail" => {
             "打开设置指南，创建 Desktop app OAuth 客户端，然后在这里粘贴对应的值。"
@@ -120,6 +124,8 @@ fn chinese(key: &'static str) -> &'static str {
         "replace_oauth_client" => "替换 OAuth 客户端",
         "return_to_days" => "返回日期",
         "save" => "保存",
+        "save_close" => "保存并关闭",
+        "saved" => "已保存",
         "save_authenticate" => "保存并认证",
         "saving_event" => "正在保存日程",
         "settings" => "设置",
@@ -146,7 +152,7 @@ fn chinese(key: &'static str) -> &'static str {
         "upcoming" => "即将到来",
         "updated" => "已更新",
         "view_day" => "日",
-        "view_month" => "月",
+        "view_month" => "当前月",
         "view_now" => "现在",
         "view_upcoming" => "即将",
         "week_start" => "每周起始日:",
@@ -163,6 +169,7 @@ fn english(key: &'static str) -> &'static str {
         "advanced" => "Advanced",
         "agenda" => "Agenda",
         "all" => "All",
+        "all_dates" => "All dates",
         "all_day" => "All day",
         "all_day_event" => "All-day event",
         "appearance" => "Appearance",
@@ -219,6 +226,7 @@ fn english(key: &'static str) -> &'static str {
         "failed_save_settings" => "Failed to save settings",
         "google_account" => "Google Account",
         "google_account_authenticated" => "Google Calendar authenticated. Loading events...",
+        "google_calendar_auth" => "Google Calendar Auth",
         "google_calendar" => "Google Calendar",
         "google_calendar_api_opened" => "Google Calendar API page opened in your browser.",
         "google_calendar_credentials_saved" => {
@@ -257,6 +265,8 @@ fn english(key: &'static str) -> &'static str {
             "The OAuth client is saved. Start browser authorization to load your calendar."
         }
         "oauth_client_saved_to" => "OAuth client saved to",
+        "oauth_client_status" => "OAuth client",
+        "oauth_token_status" => "OAuth token",
         "open_in_calendar" => "Open in Google Calendar",
         "open_setup_guide_detail" => {
             "Open the setup guide, create a Desktop app OAuth client, then paste the values here."
@@ -274,6 +284,8 @@ fn english(key: &'static str) -> &'static str {
         "replace_oauth_client" => "Replace OAuth client",
         "return_to_days" => "Return to days",
         "save" => "Save",
+        "save_close" => "Save & Close",
+        "saved" => "Saved",
         "save_authenticate" => "Save & Authenticate",
         "saving_event" => "Saving event",
         "settings" => "Settings",
@@ -300,7 +312,7 @@ fn english(key: &'static str) -> &'static str {
         "upcoming" => "Upcoming",
         "updated" => "Updated",
         "view_day" => "Day",
-        "view_month" => "Month",
+        "view_month" => "Visible Month",
         "view_now" => "Now",
         "view_upcoming" => "Upcoming",
         "week_start" => "Week Starts On:",
@@ -335,7 +347,10 @@ mod tests {
             "language",
             "login",
             "logout",
+            "oauth_client_status",
+            "oauth_token_status",
             "save",
+            "save_close",
             "theme_path",
             "timezone",
             "week_start",

@@ -55,11 +55,14 @@ Guidance for agents working in this repository.
   theme support in sync when changing that panel.
 - The agenda dashboard uses `.agenda-pane`, `.agenda-context-bar`,
   `.agenda-view-tabs`, `.agenda-view-tab`, `.agenda-list-header`,
-  `.agenda-list`, `.agenda-day-section`, `.agenda-timeline-row`, and
-  `.agenda-now-marker`; event editing uses `.event-editor-panel`,
-  `.event-detail-row`, `.event-form-row`, `.event-editor-actions`,
-  `.datetime-picker`, `.datetime-calendar`, `.datetime-time-row`, and
-  `.datetime-spin`; keep theme support in sync when changing those views.
+  `.agenda-list`, `.agenda-inline-refresh`, `.status-banner`,
+  `.agenda-day-section`, `.agenda-timeline-row`, and `.agenda-now-marker`;
+  event editing uses
+  `.event-editor-panel`, `.event-detail-row`, `.event-form-row`,
+  `.event-editor-actions`,
+  `.datetime-picker`, `.datetime-date-button`, `.datetime-popover`,
+  `.datetime-calendar`, `.datetime-time-row`, and `.datetime-spin`; keep theme
+  support in sync when changing those views.
 - The Google OAuth setup prompt links to
   `https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md`;
   keep the linked doc accurate when setup behavior changes.

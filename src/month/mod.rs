@@ -7,7 +7,8 @@ use crate::i18n::{month_name, translate, weekday_short};
 use crate::storage::settings::{Language, WeekStart, read_settings};
 use crate::ui::{add_escape_action, classed_button, clear_grid, icon_button, label};
 use adw::prelude::*;
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Datelike, Duration as ChronoDuration, Local, NaiveDate};
+use gtk::gdk;
 use relm4::{Component, ComponentParts, ComponentSender};
 
 #[derive(Debug)]
@@ -27,6 +28,7 @@ pub enum MonthMsg {
     CycleView,
     SelectMonth(u32),
     SelectYear(i32),
+    MoveSelection(i64),
     Today,
     Select(NaiveDate),
     Close,
@@ -57,6 +59,7 @@ impl Component for MonthApp {
             .resizable(false)
             .build();
         root.set_decorated(false);
+        root.set_size_request(320, 320);
         root
     }
 
@@ -148,6 +151,29 @@ impl Component for MonthApp {
             let sender = sender.clone();
             add_escape_action(&root, move || sender.input(MonthMsg::Close));
         }
+        let key_controller = gtk::EventControllerKey::new();
+        {
+            let sender = sender.clone();
+            key_controller.connect_key_pressed(move |_, key, _, _| {
+                let message = match key {
+                    gdk::Key::Left => Some(MonthMsg::MoveSelection(-1)),
+                    gdk::Key::Right => Some(MonthMsg::MoveSelection(1)),
+                    gdk::Key::Up => Some(MonthMsg::MoveSelection(-7)),
+                    gdk::Key::Down => Some(MonthMsg::MoveSelection(7)),
+                    gdk::Key::Page_Up => Some(MonthMsg::Previous),
+                    gdk::Key::Page_Down => Some(MonthMsg::Next),
+                    gdk::Key::Home => Some(MonthMsg::Today),
+                    _ => None,
+                };
+                if let Some(message) = message {
+                    sender.input(message);
+                    gtk::glib::Propagation::Stop
+                } else {
+                    gtk::glib::Propagation::Proceed
+                }
+            });
+        }
+        root.add_controller(key_controller);
 
         let mut widgets = MonthWidgets {
             previous,
@@ -180,6 +206,14 @@ impl Component for MonthApp {
             MonthMsg::SelectYear(year) => {
                 self.year = year;
                 self.view = CalendarViewMode::Months;
+            }
+            MonthMsg::MoveSelection(days) => {
+                if self.view == CalendarViewMode::Days {
+                    let selected = self.selected + ChronoDuration::days(days);
+                    self.selected = selected;
+                    self.year = selected.year();
+                    self.month = selected.month();
+                }
             }
             MonthMsg::Today => {
                 let today = Local::now().date_naive();

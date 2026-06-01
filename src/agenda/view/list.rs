@@ -184,7 +184,31 @@ fn header(
         event_count_label(visible_event_count, lang)
     };
     header.append(&label(&status_text, &["accent"], 0.0, false));
+    if model.state.loading
+        && !model.state.events.is_empty()
+        && model.event_editor == AgendaEditor::None
+    {
+        header.append(&inline_refresh(lang));
+    }
     header
+}
+
+fn inline_refresh(lang: Language) -> gtk::Box {
+    let container = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+    container.add_css_class("agenda-inline-refresh");
+    container.set_valign(gtk::Align::Center);
+
+    let spinner = gtk::Spinner::new();
+    spinner.add_css_class("agenda-inline-spinner");
+    spinner.start();
+    container.append(&spinner);
+    container.append(&label(
+        translate(lang, "refreshing"),
+        &["agenda-inline-refresh-label"],
+        0.0,
+        false,
+    ));
+    container
 }
 
 fn scrolling_body(render: BodyRender<'_>) -> gtk::ScrolledWindow {
@@ -207,26 +231,33 @@ fn body(render: BodyRender<'_>) -> gtk::Box {
             render.lang,
             render.sender,
         ));
-    } else if render.state.loading && render.state.events.is_empty() {
+    } else if let Some(message) = &render.state.error {
+        let kind = status::state_message_kind(message, render.lang);
+        if kind == status::StateMessageKind::Error {
+            append_error_state(&list, message, &render);
+        } else {
+            append_status_banner(&list, message, kind, render.lang);
+            append_regular_body(&list, &render);
+        }
+    } else {
+        append_regular_body(&list, &render);
+    }
+    list
+}
+
+fn append_regular_body(list: &gtk::Box, render: &BodyRender<'_>) {
+    if render.state.loading && render.state.events.is_empty() {
         list.append(&cards::message(
             translate(render.lang, "loading_google_calendar"),
             Some(translate(render.lang, "window_ready_updates")),
             true,
         ));
-    } else if let Some(error) = &render.state.error {
-        let context = timeline_context(&render);
-        append_error_state(&list, error, render.visible_events, context);
     } else if render.state.loading {
-        list.append(&cards::message(
-            translate(render.lang, "refreshing"),
-            Some(translate(render.lang, "showing_cached_refreshing")),
-            true,
-        ));
-        let context = timeline_context(&render);
-        append_events(&list, render.visible_events, context);
+        let context = timeline_context(render);
+        append_events(list, render.visible_events.clone(), context);
     } else if render.visible_events.is_empty() {
         timeline::append_empty_now_reference(
-            &list,
+            list,
             render.selected_day,
             render.timezone,
             render.lang,
@@ -238,25 +269,67 @@ fn body(render: BodyRender<'_>) -> gtk::Box {
             Some(&detail),
             false,
         ));
+        append_empty_action(list, render.lang, render.sender.clone());
     } else {
-        let context = timeline_context(&render);
-        append_events(&list, render.visible_events, context);
+        let context = timeline_context(render);
+        append_events(list, render.visible_events.clone(), context);
     }
-    list
 }
 
-fn append_error_state(
+fn append_error_state(list: &gtk::Box, error: &str, render: &BodyRender<'_>) {
+    if render.visible_events.is_empty() {
+        list.append(&cards::message(
+            translate(render.lang, "refresh_failed"),
+            Some(error),
+            false,
+        ));
+        return;
+    }
+
+    append_status_banner(list, error, status::StateMessageKind::Error, render.lang);
+    let context = timeline_context(render);
+    append_events(list, render.visible_events.clone(), context);
+}
+
+fn append_empty_action(list: &gtk::Box, lang: Language, sender: ComponentSender<AgendaApp>) {
+    let actions = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+    actions.set_halign(gtk::Align::Start);
+    let add = classed_button(translate(lang, "add_event"), &["action-button"]);
+    add.add_css_class("primary-action");
+    add.connect_clicked(move |_| sender.input(AgendaMsg::ShowAddEvent));
+    actions.append(&add);
+    list.append(&actions);
+}
+
+fn append_status_banner(
     list: &gtk::Box,
-    error: &str,
-    visible_events: Vec<&Event>,
-    context: timeline::TimelineContext<'_>,
+    message: &str,
+    kind: status::StateMessageKind,
+    lang: Language,
 ) {
-    list.append(&cards::message(
-        translate(context.lang, "refresh_failed"),
-        Some(error),
-        false,
-    ));
-    append_events(list, visible_events, context);
+    let banner = gtk::Box::new(gtk::Orientation::Vertical, 4);
+    banner.add_css_class("status-banner");
+    match kind {
+        status::StateMessageKind::Error => {
+            banner.add_css_class("error");
+            banner.append(&label(
+                translate(lang, "refresh_failed"),
+                &["status-banner-title"],
+                0.0,
+                false,
+            ));
+            banner.append(&label(message, &["muted"], 0.0, true));
+        }
+        status::StateMessageKind::Info => {
+            banner.add_css_class("info");
+            banner.append(&label(message, &["status-banner-title"], 0.0, true));
+        }
+        status::StateMessageKind::Success => {
+            banner.add_css_class("success");
+            banner.append(&label(message, &["status-banner-title"], 0.0, true));
+        }
+    }
+    list.append(&banner);
 }
 
 fn append_events(list: &gtk::Box, events: Vec<&Event>, context: timeline::TimelineContext<'_>) {

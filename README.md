@@ -115,12 +115,13 @@ The agenda popup features an in-window settings panel accessible by clicking the
 - **Calendar & Timezone**: Set a specific Calendar Name/ID (e.g. `primary` or your workspace calendar ID), choose a searchable IANA timezone override, and set the first day of the week (Sunday by default). Saving changes will immediately re-fetch the Google Calendar events for the new configurations.
 - **Appearance**: Specify a custom CSS stylesheet theme file path. Upon saving, the theme is dynamically reloaded in the running application in real-time.
 - **Language**: Choose between English (default) and Chinese (中文). Saving changes dynamically localizes the entire interface in real-time.
-- **Google Account Status**: Check if the client secret and token files are present. You can:
+- **Google Account Status**: Check the OAuth client and token status separately. You can:
+  - **Setup Guide**: Open the Google OAuth setup walkthrough when the OAuth client is missing.
   - **Log In**: Initiate Google OAuth login in your browser.
   - **Log Out**: Instantly delete the cached OAuth tokens and wipe local cached calendar data for security and privacy.
 
 Use **Apply** to apply and save changes while keeping the settings panel open.
-Use **Save** to apply and save changes, then return to the agenda view.
+Use **Save & Close** to apply and save changes, then return to the agenda view.
 
 All GUI settings are saved persistently to a local JSON file:
 ```text
@@ -148,15 +149,16 @@ dashboard. The agenda dashboard keeps the current time and next event visible,
 then renders events as a date-grouped timeline with a red current-time marker
 for today. Click an event to inspect its details, edit title, date, time,
 location, and description, open it in Google Calendar, or delete it. Event date
-and time fields use calendar and spinner controls instead of raw text fields.
-Use the plus button to create a new event on the selected writable calendar.
-Switch between `Now`,
-`Upcoming`, `Day`, and `Month` views. Use the chevron buttons to move through
-the calendar, click the calendar title to switch from days to months and years,
-click a day to open the `Day` view, or use `All` and `Today` for quick
+and time fields use compact date popovers and spinner controls instead of raw
+text fields. Use the plus button or empty-state add button to create a new
+event on the selected writable calendar. Switch between `Now`, `Upcoming`,
+`Day`, and `Visible Month` views. Use the chevron buttons to move through the
+calendar, click the calendar title to switch from days to months and years,
+click a day to open the `Day` view, or use `All dates` and `Today` for quick
 selection. Events are fetched dynamically for the visible calendar grid, so
 changing months refreshes the Google Calendar range for that month. The
-standalone month popup supports the same day, month, and year navigation.
+standalone month popup supports the same day, month, and year navigation, plus
+keyboard navigation with arrow keys, `PageUp`, `PageDown`, and `Home`.
 
 Agenda can also filter to a calendar name or ID:
 
@@ -213,9 +215,12 @@ Important CSS classes:
 
 - `.panel`, `.topbar`, `.left-pane`
 - `.agenda-pane`, `.agenda-context-bar`, `.agenda-view-tabs`, `.agenda-view-tab`
+- `.agenda-inline-refresh`, `.agenda-inline-spinner`, `.agenda-inline-refresh-label`
+- `.status-banner`, `.status-banner-title`
 - `.agenda-day-section`, `.agenda-timeline-row`, `.agenda-now-marker`
 - `.event-editor-panel`, `.event-detail-row`, `.event-form-row`, `.event-editor-actions`
-- `.datetime-picker`, `.datetime-calendar`, `.datetime-time-row`, `.datetime-spin`
+- `.datetime-picker`, `.datetime-date-button`, `.datetime-date-label`, `.datetime-popover`
+- `.datetime-calendar`, `.datetime-time-row`, `.datetime-spin`
 - `.agenda-card`, `.empty-card`
 - `.settings-card`, `.settings-row`, `.settings-panel`
 - `.settings-icon-tile`, `.settings-icon-glyph`
@@ -228,7 +233,7 @@ Important CSS classes:
 - `.weekday`, `.date-cell`, `.day`
 - `.calendar-title-button`, `.calendar-title-icon`, `.calendar-picker-grid`,
   `.calendar-picker-cell`
-- `.event-date`, `.event-time`, `.pill`
+- `.event-time`, `.pill`
 - `.nav-button`, `.action-button`, `.close-button`
 
 The packaged default theme is also installed at:

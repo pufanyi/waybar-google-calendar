@@ -30,13 +30,6 @@ fn missing_client(
         translate(lang, "create_google_oauth_client"),
         translate(lang, "open_setup_guide_detail"),
     );
-    let note = label(
-        "Guide: https://github.com/pufanyi/waybar-google-calendar/blob/main/docs/google-oauth.md",
-        &["muted", "auth-note"],
-        0.0,
-        true,
-    );
-    body.append(&note);
     append_setup_actions(&body, lang, sender.clone());
     body.append(&form::credentials(
         authenticating,
@@ -126,6 +119,7 @@ fn append_setup_guide_button(
     sender: ComponentSender<AgendaApp>,
 ) {
     let setup_guide = classed_button(translate(lang, "setup_guide"), &["action-button"]);
+    setup_guide.add_css_class("primary-action");
     {
         let sender = sender.clone();
         setup_guide.connect_clicked(move |_| sender.input(AgendaMsg::OpenSetupGuide));
@@ -151,6 +145,7 @@ fn append_start_auth_action(
         },
         &["action-button"],
     );
+    start_auth.add_css_class("primary-action");
     start_auth.set_sensitive(!authenticating);
     {
         let sender = sender.clone();

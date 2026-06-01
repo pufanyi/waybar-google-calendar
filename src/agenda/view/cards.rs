@@ -1,17 +1,13 @@
-use crate::calendar::date::{
-    format_day_label_for_timezone, format_time_label_for_timezone, parse_event_start_for_timezone,
-};
 use crate::calendar::model::Event;
 use crate::i18n::translate;
 use crate::storage::settings::Language;
 use crate::ui::label;
 use adw::prelude::*;
 
-pub(super) fn event(event: &Event, timezone: Option<&str>, lang: Language) -> gtk::Box {
+pub(super) fn event(event: &Event, _timezone: Option<&str>, lang: Language) -> gtk::Box {
     let card = gtk::Box::new(gtk::Orientation::Vertical, 6);
     card.add_css_class("agenda-card");
 
-    card.append(&event_meta(event, timezone, lang));
     card.append(&event_title(event, lang));
     card.append(&event_details(event, lang));
     card
@@ -36,26 +32,6 @@ pub(super) fn message(title: &str, detail: Option<&str>, spinner: bool) -> gtk::
         card.append(&label(detail, &["muted"], 0.0, true));
     }
     card
-}
-
-fn event_meta(event: &Event, timezone: Option<&str>, lang: Language) -> gtk::Box {
-    let start = parse_event_start_for_timezone(&event.start, timezone);
-    let meta = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-    meta.append(&label(
-        &start
-            .map(|(date, _)| format_day_label_for_timezone(date, timezone, lang))
-            .unwrap_or_else(|| translate(lang, "upcoming").to_string()),
-        &["event-date"],
-        0.0,
-        false,
-    ));
-    meta.append(&label(
-        &format_time_label_for_timezone(&event.start, &event.end, timezone, lang),
-        &["event-time"],
-        0.0,
-        false,
-    ));
-    meta
 }
 
 fn event_title(event: &Event, lang: Language) -> gtk::Label {

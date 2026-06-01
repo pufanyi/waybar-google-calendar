@@ -1,4 +1,4 @@
-use super::widgets::{block_scroll_changes, drop_down, set_drop_down_strings};
+use super::widgets::{block_scroll_changes, drop_down, label, set_drop_down_strings};
 use crate::i18n::translate;
 use crate::storage::settings::Language;
 use adw::prelude::*;
@@ -12,16 +12,16 @@ pub struct DateTimePicker {
     calendar: gtk::Calendar,
     hour: gtk::SpinButton,
     minute: gtk::SpinButton,
+    time_row: gtk::Box,
 }
 
 impl DateTimePicker {
     pub fn new(date: NaiveDate, time: NaiveTime) -> Self {
-        let container = gtk::Box::new(gtk::Orientation::Vertical, 8);
+        let container = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         container.add_css_class("datetime-picker");
 
         let calendar = gtk::Calendar::new();
         calendar.add_css_class("datetime-calendar");
-        calendar.set_hexpand(true);
         block_scroll_changes(&calendar);
         if let Ok(date_time) = glib::DateTime::from_local(
             date.year(),
@@ -33,7 +33,40 @@ impl DateTimePicker {
         ) {
             calendar.set_date(Some(&date_time));
         }
-        container.append(&calendar);
+
+        let date_button = gtk::Button::new();
+        date_button.add_css_class("datetime-date-button");
+        date_button.set_cursor_from_name(Some("pointer"));
+        date_button.set_hexpand(true);
+
+        let date_content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        date_content.set_valign(gtk::Align::Center);
+        let date_label = label(&date.format("%Y-%m-%d").to_string(), &[], 0.0, false);
+        date_label.add_css_class("datetime-date-label");
+        date_label.set_hexpand(true);
+        date_content.append(&date_label);
+        let date_icon = gtk::Image::from_icon_name("x-office-calendar-symbolic");
+        date_icon.add_css_class("calendar-title-icon");
+        date_content.append(&date_icon);
+        date_button.set_child(Some(&date_content));
+
+        let popover = gtk::Popover::new();
+        popover.add_css_class("datetime-popover");
+        popover.set_child(Some(&calendar));
+        popover.set_parent(&date_button);
+        {
+            let popover = popover.clone();
+            date_button.connect_clicked(move |_| popover.popup());
+        }
+        {
+            let date_label = date_label.clone();
+            let popover = popover.clone();
+            calendar.connect_day_selected(move |calendar| {
+                date_label.set_text(&calendar_date_string(calendar));
+                popover.popdown();
+            });
+        }
+        container.append(&date_button);
 
         let time_row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
         time_row.add_css_class("datetime-time-row");
@@ -51,6 +84,7 @@ impl DateTimePicker {
             calendar,
             hour,
             minute,
+            time_row,
         }
     }
 
@@ -73,9 +107,20 @@ impl DateTimePicker {
     }
 
     pub fn set_time_sensitive(&self, sensitive: bool) {
+        self.time_row.set_sensitive(sensitive);
         self.hour.set_sensitive(sensitive);
         self.minute.set_sensitive(sensitive);
     }
+}
+
+fn calendar_date_string(calendar: &gtk::Calendar) -> String {
+    let date = calendar.date();
+    format!(
+        "{:04}-{:02}-{:02}",
+        date.year(),
+        date.month(),
+        date.day_of_month()
+    )
 }
 
 pub fn time_zone_drop_down(current: Option<&str>, lang: Language) -> gtk::DropDown {
